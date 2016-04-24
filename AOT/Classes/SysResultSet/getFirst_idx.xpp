@@ -1,0 +1,12 @@
+public static anytype getFirst_idx(str sqlStatement, int columnIdx = 1, Connection connection = new Connection())
+{
+    SysResultSet  res = SysResultSet::executeQuery(sqlStatement, connection);
+
+    if( res.next() )
+        return res.value_idx(columnIdx);
+
+    if( res.metaData() )
+        return res.valueNull_idx(columnIdx);
+
+    return #NA;
+}

@@ -1,0 +1,9 @@
+// возвращает аксаптовское null-значение для указанной колонки
+public static anytype getNull(types t, Types preferType = types::AnyType)
+{
+    if( preferType == Types::Date && t == types::UtcDateTime )
+    {
+        return DateNull();
+    }
+    return nullValueBaseType(t, true);
+}

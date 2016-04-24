@@ -1,0 +1,47 @@
+// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
+// mazzy, v1.02-ax6, 24.04.2016
+//
+// Disclimer:
+// Конечно надо было бы показать обращение к внешней базе - Oracle, MS SQL, Access, DBF и прочее
+// Но resultSet со всеми базами работает одинаково. Отличаются только connection.
+// Чтобы не усложнять пример установокой базы и не поставлять отдельный файл с базой
+// чтение выполняется из аксаптовских таблиц.
+//
+static void tutorial_SysResultSet_Legacy(Args _args)
+{
+    #AVIfiles
+    Connection                      conn        = new Connection(); // в реальном коде здесь должно быть ODBCconnection, OCIconnection со своими connectionString...
+    ResultSet                       resultSet;
+
+    str                             sqlStr      = @"select top 10 * from VENDTRANS as t";
+    //legacy: SqlStatementExecutePermission   permission  = new SqlStatementExecutePermission(sqlStr);
+    //legacy: Statement                       sqlStatement;
+
+    str                             description = funcname();
+    SysOperationProgress            progress    = SysOperationProgress::newGeneral(#AviSearch, description, 0);
+;
+    setprefix(description);
+
+    startLengthyOperation();
+    //legacy: permission.assert();
+    //legacy: sqlStatement = conn.createStatement();
+    //legacy: resultSet = sqlStatement.executeQuery(sqlStr);
+    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // можно значительно упростить код и состав переменных
+
+    while( resultSet.next() )
+    {
+        // legacyCode - обратите внимание, что колонки читаются в возрастающем порядке и каждая колонка читается только один раз
+        // ... = resultSet.getString(1)
+        // ... = resultSet.getInt(2)
+        // ... = resultSet.getReal(3)
+        //
+        // вы хотите добавить обработку своих только что добавленных полей
+        info(strFmt("%1", SysResultSet::get(resultSet, 4)));
+        info(strFmt("%1", SysResultSet::get(resultSet, 5)));
+        // чтобы получать значения по именам, все таки придется изменить тип переменной resultSet на SysResultSet.
+
+        progress.incCount();
+    }
+    endLengthyOperation();
+    info(strfmt("%1 records done.", progress.getCount_RU()));
+}

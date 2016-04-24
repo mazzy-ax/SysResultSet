@@ -1,0 +1,49 @@
+protected boolean copyAllowed(str columnName, SysDictField df)
+{
+    if( df && columnName && this.values().exists(columnName) && df.saveContents() && df.isSql() && !df.isSystem() )
+    {
+        switch( this.typeOf(columnName) )
+        {
+            case Types::String:
+            case Types::VarString:
+            case Types::RString:
+                switch( df.baseType() )
+                {
+                    case Types::String:
+                    case Types::RString:
+                    case Types::VarString:
+                        return true;
+                }
+
+            case Types::Integer:
+            case Types::Time:
+            case Types::Enum:
+                switch( df.baseType() )
+                {
+                    case Types::Integer:
+                    case Types::Real:
+                    case Types::Enum:
+                    case Types::Int64:
+                    case Types::Time:
+                        return true;
+                }
+            case Types::UtcDateTime:
+            case Types::Date:
+                switch( df.baseType() )
+                {
+                    case Types::UtcDateTime:
+                    case Types::Date:
+                        return true;
+                }
+            case Types::Real:
+                return df.baseType() == Types::Real;
+            case Types::Guid:
+                return df.baseType() == Types::Guid;
+            case Types::Int64:
+                return df.baseType() == Types::Int64;
+            case Types::Container:
+                return df.baseType() == Types::Container;
+        }
+    }
+    return false;
+}

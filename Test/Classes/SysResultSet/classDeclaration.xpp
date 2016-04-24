@@ -1,0 +1,4 @@
+// mazzy, v1.02-ax6, 24.04.2016
+class SysResultSetTest extends SysTestCase
+{
+}

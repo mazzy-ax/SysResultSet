@@ -1,0 +1,34 @@
+void testCount()
+{
+
+    SqlSystem       sql = new SqlSystem();
+    CustTable       cust;
+    SysResultSet    resultSet;
+    int             recCount;
+
+    int getRecCount()
+    {
+        Query q = new Query();
+        q.addDataSource(cust.TableId);
+        return SysQuery::countTotal(new QueryRun(q));
+    }
+
+;
+    recCount = getRecCount();
+
+    cust.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если cust находится в виртуальной компании
+
+    // имя колонки не указано
+    // количество записей, посчитанное разными способами, должно совпадать со значением первой колонки
+    this.assertEquals(
+        recCount,
+        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)))
+    );
+
+    // имя колонки указано
+    // количество записей, посчитанное разными способами, должно совпадать
+    this.assertEquals(
+        recCount,
+        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)), 'cnt')
+    );
+}

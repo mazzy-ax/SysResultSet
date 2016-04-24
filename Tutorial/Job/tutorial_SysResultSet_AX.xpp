@@ -1,0 +1,64 @@
+// пример работы SysResultSet с аксаптовскими таблицами
+// mazzy, v1.02-ax6, 24.04.2016
+//
+// Disclimer:
+// ResultSet всегда медленнее читает аксаптовские, чем непосредственно select или query
+// во-первых, потому что ResultSet читает по одной записи из курсора, а select или query читают сразу несколько записей в буфер
+// поэтому число обращений к SQL серверу у объекта ResultSet всегда будет "не меньше", чем select
+// см. http://axforum.info/forums/showthread.php?t=4341
+// во-вторых, никто не знает что за обертки и врапперы используются в ядре для реализации ResultSet
+// во-третьих, класс SysResultSet тратит значительные ресурсы на хранение результатов и прочее обслуживание
+//
+// Кроме того, ResultSet всегда опаснее прямых запросов.
+// Поскольку ResultSet ничего не знает о виртуальных компаниях, XDS/RLS, о правах доступа к таблицам и о прочих безопасностях
+//
+// Однако есть типы задач, когда использование ResultSet для доступа к аксаптовским таблицам оправдано.
+// Дело в том, что в аксаптовских select/query отсутствует having. А в прошлых версиях отсутствовал и union.
+// Поэтому всевозможные сверки, поиск групп с заданными свойствами - другими словами, задачи, требующие having - вполне можно решать при помощи SysResultSet
+//
+// в данном примере рассматривается типовая задача сверки суммы в открытых проводках по поставщикам с суммой проводок
+// для простоты сверка делается без валют, только по AmountMST
+static void tutorial_SysResultSet_AX(Args _args)
+{
+    #AVIfiles
+    VendTrans               trans;
+    VendTransOpen           open;
+
+    SqlSystem               sql         = new SqlSystem();
+    SysResultSet            resultSet;
+
+    str                     description = funcname();
+    SysOperationProgress    progress    = SysOperationProgress::newGeneral(#AviSearch,description,0);
+;
+    setprefix(description);
+
+    trans.clear(); // проявляем partition и dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
+    open.clear();  // проявляем partition и dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
+
+    Debug::assert(sql.databaseId() == DatabaseId::MS_Sql_Server);
+
+    startLengthyOperation();
+    resultSet = SysResultSet::executeQuery(strfmt(@"
+        with trans as (
+        select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID, o.PARTITION from VENDTRANSOPEN as o
+        where o.PARTITION = %1 and o.DATAAREAID = %2
+        union
+        select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID, t.PARTITION from VENDTRANS as t
+        where t.PARTITION = %3 and t.DATAAREAID = %4
+        )
+        select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID, PARTITION from trans
+        group by PARTITION, DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId -- индекс t.AccountDateIdx, o.AccountDateIdx
+        having sum(AmountMST) <> 0
+        order by PARTITION, DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
+    ", sql.sqlLiteral(open.Partition), sql.sqlLiteral(open.dataAreaId),
+       sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+
+    while( resultSet.next() )
+    {
+        error(strFmt("%1, %2, %3, %4", resultSet.value("AmountMST"), resultSet.value("AccountNum"), resultSet.value("TransDate", Types::Date), resultSet.value("RecId")),
+              "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId"))));
+        progress.incCount();
+    }
+    endLengthyOperation();
+    info(strfmt("%1 records done.", progress.getCount_RU()));
+}

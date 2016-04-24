@@ -1,0 +1,4 @@
+public static SysResultSet executeQuery(str sqlStatement, Connection connection = new Connection())
+{
+    return SysResultSet::construct(SysResultSet::executeQuery_base(sqlStatement, connection));
+}

@@ -1,0 +1,5 @@
+void testEmpty()
+{
+    this.assertEquals(0, SysResultSet::getFirst(@"select 1 where 1 = 2"));
+    this.assertEquals(0, SysResultSet::getFirst(@"select 1 as col where 1 = 2","col"));
+}

@@ -1,0 +1,7 @@
+server public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
+{
+    SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
+
+    permission.assert();
+    return connection.createStatement().executeUpdate(sqlStatement);
+}

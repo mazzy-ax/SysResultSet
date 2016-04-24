@@ -1,0 +1,9 @@
+// возвращает аксаптовское null-значение для указанной колонки
+public anytype valueNull(str columnName, Types preferType = types::AnyType)
+{
+    if( this.values().exists(columnName) )
+    {
+        return SysResultSet::getNull(this.typeof(columnName), preferType);
+    }
+    return #NA;
+}
