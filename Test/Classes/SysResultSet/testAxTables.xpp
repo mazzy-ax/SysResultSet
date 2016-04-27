@@ -30,8 +30,8 @@ void testAxTables()
         from CUSTTRANS as t
         join CUSTTRANSOPEN as o
             on (t.DATAAREAID = o.DATAAREAID and t.RECID = o.REFRECID)
-        where t.PARTITION = %1 and t.DATAAREAID = %2
-        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+        where t.DATAAREAID = %1
+        ", sql.sqlLiteral(trans.dataAreaId)));
 
     this.assertNotNull(resultSet, "resultSet не создан");
 
@@ -58,15 +58,11 @@ void testAxTables()
         this.assertEquals(trans_recId, trans.RecId, strfmt("%1: не найден trans с recID %2", lineCount, trans_recId));
 
         resultSet.copyTo(trans_res);
-
         for(i=1; i<=dt.columnCnt(); ++i )
         {
             df = new SysDictField(dt.id(), dt.column2id(i));
             if( df && df.saveContents() && df.isSql() && !df.isSystem() )
             {
-                if( df.name() == "MCRPAYMORDERID" )
-                    continue; //TODO почему resultSet возвращает " " вместо пустой строки?
-
                 this.assertEquals(trans.(df.extendedFieldId()), trans_res.(df.extendedFieldId()), strfmt("%1: не совпадают trans.%2 и resultSet после copyTo", lineCount, df.name()));
             }
         }

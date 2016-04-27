@@ -3,13 +3,13 @@ Formatversion: 1
 
 ***Element: JOB
 
-; Microsoft Dynamics AX Job: tutorial_SysResultSet_AX unloaded
+; Microsoft Dynamics AX Job: tutorial_SysResultSet_AX выгружен
 ; --------------------------------------------------------------------------------
   JOBVERSION 1
   
   SOURCE #tutorial_SysResultSet_AX
     #// пример работы SysResultSet с аксаптовскими таблицами
-    #// mazzy, v1.03-ax6, 27.04.2016
+    #// mazzy, v1.03-ax5, 27.04.2016
     #//
     #// Disclimer:
     #// ResultSet всегда медленнее читает аксаптовские, чем непосредственно select или query
@@ -46,26 +46,26 @@ Formatversion: 1
     #;
     #    setprefix(description);
     #
-    #    trans.clear(); // проявляем partition и dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
-    #    open.clear();  // проявляем partition и dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
+    #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
+    #    open.clear();  // проявляем dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
     #
     #    Debug::assert(sql.databaseId() == DatabaseId::MS_Sql_Server);
     #
     #    startLengthyOperation();
     #    resultSet = SysResultSet::executeQuery(strfmt(@"
-    #        with trans as (
-    #        select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID, o.PARTITION from VENDTRANSOPEN as o
-    #        where o.PARTITION = %1 and o.DATAAREAID = %2
+    #    with trans as (
+    #        select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID from VENDTRANSOPEN as o
+    #        where o.DATAAREAID = %1
     #        union
-    #        select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID, t.PARTITION from VENDTRANS as t
-    #        where t.PARTITION = %3 and t.DATAAREAID = %4
+    #        select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID from VENDTRANS as t
+    #        where t.DATAAREAID = %2
     #        )
-    #        select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID, PARTITION from trans
-    #        group by PARTITION, DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId -- индекс t.AccountDateIdx, o.AccountDateIdx
+    #    select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID from trans
+    #        group by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId -- индекс t.AccountDateIdx, o.AccountDateIdx
     #        having sum(AmountMST) <> 0
-    #        order by PARTITION, DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
-    #    ", sql.sqlLiteral(open.Partition), sql.sqlLiteral(open.dataAreaId),
-    #       sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+    #        order by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
+    #    ", sql.sqlLiteral(open.dataAreaId),
+    #       sql.sqlLiteral(trans.dataAreaId)));
     #
     #    while( resultSet.next() )
     #    {
@@ -77,9 +77,5 @@ Formatversion: 1
     #    info(strfmt("%1 records done.", progress.getCount_RU()));
     #}
   ENDSOURCE
-  PROPERTIES
-    Origin              #{33481A07-1B62-4A43-BB4C-47D6DA88D52D}
-  ENDPROPERTIES
-  
 
 ***Element: END

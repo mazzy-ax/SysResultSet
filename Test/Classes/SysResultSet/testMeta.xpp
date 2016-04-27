@@ -11,9 +11,9 @@ void testMeta()
 
     resultSet = SysResultSet::executeQuery(strfmt(@"
         select top 10 accountNum, transDate, sum(amountMST) as amountMST, count(*) from CUSTTRANS
-        where PARTITION = %1 and DATAAREAID = %2
+        where DATAAREAID = %1
         group by accountNum, transDate
-        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+        ", sql.sqlLiteral(trans.dataAreaId)));
 
     this.assertNotNull(resultSet, "resultSet не создан");
     this.assertNotNull(resultSet.resultSet(), "resultSet() не создан");

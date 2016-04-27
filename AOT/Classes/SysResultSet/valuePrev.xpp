@@ -6,5 +6,5 @@ public anytype valuePrev(str columnName, Types preferType = types::AnyType)
     {
         return SysResultSet::convert(valuesPrev.value(columnName), preferType);
     }
-    return this.valueNull(columnName, preferType);
+    return this.getNull(columnName, preferType);
 }

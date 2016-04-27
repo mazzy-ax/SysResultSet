@@ -23,7 +23,7 @@ Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend
     // создаем привязки полей к колонкам resultSet
     binds  = new Map(Types::String, Types::Class);           // поля с привязкой
     dt = SysDictTable::newTableId(rec.tableId);
-    if( dt.isTmp() && !dt.isTempDb() )
+    if( dt.isTmp() )
     {
         dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
     }

@@ -3,11 +3,6 @@ void testNull()
     int i,n;
     str columnName;
 
-    //           cast(null as date) as date,
-    //           cast(null as text) as text,
-    //           cast(null as smallDateTime) as smallDateTime,
-    //           cast(null as time) as time,
-
     SysResultSet    resultSet;
 
     this.assertEquals(DatabaseId::MS_Sql_Server, SqlSystem::databaseBackendId()); // протестировано только на MS SQL
@@ -16,6 +11,7 @@ void testNull()
     select
            cast(null as bigint) as bigint,
            cast(null as char) as char,
+           cast(null as date) as date,
            cast(null as dateTime) as dateTime,
            cast(null as decimal) as decimal,
            cast(null as float) as float,
@@ -25,6 +21,9 @@ void testNull()
            cast(null as numeric) as numeric,
            cast(null as nvarchar) as nvarchar,
            cast(null as real) as real,
+           cast(null as smallDateTime) as smallDateTime,
+           cast(null as text) as text,
+           cast(null as time) as time,
            cast(null as tinyint) as tinyint,
            cast(null as uniqueidentifier) as uniqueidentifier,
            cast(null as varchar) as varchar

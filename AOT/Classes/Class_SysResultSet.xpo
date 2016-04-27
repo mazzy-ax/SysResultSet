@@ -3,22 +3,23 @@ Formatversion: 1
 
 ***Element: CLS
 
-; Microsoft Dynamics AX Class: SysResultSet unloaded
+; Microsoft Dynamics AX Class: SysResultSet выгружен
 ; --------------------------------------------------------------------------------
   CLSVERSION 1
   
   CLASS #SysResultSet
+    Id 53944
     PROPERTIES
       Name                #SysResultSet
-      RunOn               #Server
-      Origin              #{C26373C2-637B-44D6-9D3F-CD9BB352BD62}
-      LegacyId            #53944
+      Extends             #
+      RunOn               #Called from
     ENDPROPERTIES
     
     METHODS
+      Version: 3
       SOURCE #binds
         #// возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
-        #// для каждого ключа [tableId, formatColumnName] хранится отдельный map
+        #// для каждого ключа [tableId, formatColumnName, dbBackend] хранится отдельный map
         #//
         #// если для данного ключа map еще не создавался, то создаст map,
         #// содержащий все возможные пары, для которых названия и типы совпадают
@@ -42,7 +43,7 @@ Formatversion: 1
         #    // создаем привязки полей к колонкам resultSet
         #    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
         #    dt = SysDictTable::newTableId(rec.tableId);
-        #    if( dt.isTmp() && !dt.isTempDb() )
+        #    if( dt.isTmp() )
         #    {
         #        dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
         #    }
@@ -80,7 +81,7 @@ Formatversion: 1
         #// это разрешение выдается только на сервере.
         #// Следите за тем, чтобы объекты этого класса создавались на сервере, чтобы не генерировать лишнего трафика между клиентом и сервером.
         #//
-        #// mazzy, v1.03-ax6, 27.04.2016
+        #// mazzy, v1.03-ax5, 27.04.2016
         #class SysResultSet
         #{
         #    #define.NA(0)
@@ -340,7 +341,7 @@ Formatversion: 1
         #    {
         #        return SysResultSet::convert(valuesPrev.value(columnName), preferType);
         #    }
-        #    return this.valueNull(columnName, preferType);
+        #    return this.getNull(columnName, preferType);
         #}
       ENDSOURCE
       SOURCE #valuePrev_idx
