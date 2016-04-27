@@ -2,7 +2,7 @@
 * text=auto
 
 # Custom for Visual Studio
-*.xpp diff=java
+*.xpp linguist-language=Java
 
 # Standard to msysgit
 *.doc	 diff=astextplain
