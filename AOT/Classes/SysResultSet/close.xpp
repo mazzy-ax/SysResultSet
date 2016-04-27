@@ -1,4 +1,4 @@
-public void close()
+﻿public void close()
 {;
     resultSet.close();
     metaData = null;

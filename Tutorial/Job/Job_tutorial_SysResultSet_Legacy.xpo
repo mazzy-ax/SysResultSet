@@ -3,13 +3,13 @@ Formatversion: 1
 
 ***Element: JOB
 
-; Microsoft Dynamics AX Job: tutorial_SysResultSet_Legacy unloaded
+; Microsoft Dynamics Job: tutorial_SysResultSet_Legacy выгружен
 ; --------------------------------------------------------------------------------
   JOBVERSION 1
   
   SOURCE #tutorial_SysResultSet_Legacy
     #// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
-    #// mazzy, v1.02-ax6, 24.04.2016
+    #// mazzy, v1.02-ax4, 24.04.2016
     #//
     #// Disclimer:
     #// Конечно надо было бы показать обращение к внешней базе - Oracle, MS SQL, Access, DBF и прочее
@@ -53,12 +53,8 @@ Formatversion: 1
     #        progress.incCount();
     #    }
     #    endLengthyOperation();
-    #    info(strfmt("%1 records done.", progress.getCount_RU()));
+    #    info("done.");
     #}
   ENDSOURCE
-  PROPERTIES
-    Origin              #{11F9CA61-D5BD-49D5-BC92-4B4D69CFE2D0}
-  ENDPROPERTIES
-  
 
 ***Element: END

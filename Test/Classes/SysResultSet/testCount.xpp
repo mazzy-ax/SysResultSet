@@ -1,6 +1,5 @@
-void testCount()
+﻿void testCount()
 {
-
     SqlSystem       sql = new SqlSystem();
     CustTable       cust;
     SysResultSet    resultSet;
@@ -22,13 +21,13 @@ void testCount()
     // количество записей, посчитанное разными способами, должно совпадать со значением первой колонки
     this.assertEquals(
         recCount,
-        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)))
+        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)))
     );
 
     // имя колонки указано
     // количество записей, посчитанное разными способами, должно совпадать
     this.assertEquals(
         recCount,
-        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)), 'cnt')
+        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)), 'cnt')
     );
 }

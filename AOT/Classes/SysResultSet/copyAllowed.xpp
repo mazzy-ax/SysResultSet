@@ -1,4 +1,4 @@
-protected boolean copyAllowed(str columnName, SysDictField df)
+﻿protected boolean copyAllowed(str columnName, SysDictField df)
 {
     if( df && columnName && this.values().exists(columnName) && df.saveContents() && df.isSql() && !df.isSystem() )
     {
@@ -16,7 +16,6 @@ protected boolean copyAllowed(str columnName, SysDictField df)
                 }
 
             case Types::Integer:
-            case Types::Time:
             case Types::Enum:
                 switch( df.baseType() )
                 {
@@ -24,17 +23,17 @@ protected boolean copyAllowed(str columnName, SysDictField df)
                     case Types::Real:
                     case Types::Enum:
                     case Types::Int64:
-                    case Types::Time:
                         return true;
                 }
-            case Types::UtcDateTime:
             case Types::Date:
                 switch( df.baseType() )
                 {
-                    case Types::UtcDateTime:
+                    case Types::DateTime:
                     case Types::Date:
                         return true;
                 }
+            case Types::DateTime:
+                return df.baseType() == Types::DateTime;
             case Types::Real:
                 return df.baseType() == Types::Real;
             case Types::Guid:

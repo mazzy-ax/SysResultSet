@@ -3,22 +3,22 @@ Formatversion: 1
 
 ***Element: CLS
 
-; Microsoft Dynamics AX Class: SysResultSet unloaded
+; Microsoft Dynamics Class: SysResultSet выгружен
 ; --------------------------------------------------------------------------------
   CLSVERSION 1
   
   CLASS #SysResultSet
     PROPERTIES
       Name                #SysResultSet
+      Extends             #
       RunOn               #Server
-      Origin              #{C26373C2-637B-44D6-9D3F-CD9BB352BD62}
-      LegacyId            #53944
     ENDPROPERTIES
     
     METHODS
+      Version: 3
       SOURCE #binds
         #// возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
-        #// для каждого ключа [tableId, formatColumnName] хранится отдельный map
+        #// для каждого ключа [tableId, formatColumnName, dbBackend] хранится отдельный map
         #//
         #// если для данного ключа map еще не создавался, то создаст map,
         #// содержащий все возможные пары, для которых названия и типы совпадают
@@ -42,7 +42,7 @@ Formatversion: 1
         #    // создаем привязки полей к колонкам resultSet
         #    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
         #    dt = SysDictTable::newTableId(rec.tableId);
-        #    if( dt.isTmp() && !dt.isTempDb() )
+        #    if( dt.isTmp() )
         #    {
         #        dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
         #    }
@@ -80,7 +80,7 @@ Formatversion: 1
         #// это разрешение выдается только на сервере.
         #// Следите за тем, чтобы объекты этого класса создавались на сервере, чтобы не генерировать лишнего трафика между клиентом и сервером.
         #//
-        #// mazzy, v1.03-ax6, 27.04.2016
+        #// mazzy, v1.03-ax4, 27.04.2016
         #class SysResultSet
         #{
         #    #define.NA(0)
@@ -124,7 +124,6 @@ Formatversion: 1
         #                }
         #
         #            case Types::Integer:
-        #            case Types::Time:
         #            case Types::Enum:
         #                switch( df.baseType() )
         #                {
@@ -132,17 +131,17 @@ Formatversion: 1
         #                    case Types::Real:
         #                    case Types::Enum:
         #                    case Types::Int64:
-        #                    case Types::Time:
         #                        return true;
         #                }
-        #            case Types::UtcDateTime:
         #            case Types::Date:
         #                switch( df.baseType() )
         #                {
-        #                    case Types::UtcDateTime:
+        #                    case Types::DateTime:
         #                    case Types::Date:
         #                        return true;
         #                }
+        #            case Types::DateTime:
+        #                return df.baseType() == Types::DateTime;
         #            case Types::Real:
         #                return df.baseType() == Types::Real;
         #            case Types::Guid:
@@ -419,8 +418,8 @@ Formatversion: 1
         #        case Types::RString:
         #            ret = any2str(value);
         #            break;
+        #        case Types::DateTime:
         #        case Types::Integer:
-        #        case Types::Time:
         #            ret = any2int(value);
         #            break;
         #        case Types::Int64:
@@ -436,16 +435,7 @@ Formatversion: 1
         #                ret = any2enum(value);
         #            break;
         #        case Types::Date:
-        #            if( typeOf(value) == Types::UtcDateTime )
-        #                ret = datetimeutil::date(value);
-        #            else
-        #                ret = any2date(value);
-        #            break;
-        #        case Types::UtcDateTime:
-        #            if( typeOf(value) == Types::Date )
-        #                ret = datetimeutil::date(value);
-        #            else
-        #                ret = DateTimeUtil::anyToDateTime(value);
+        #            ret = any2date(value);
         #            break;
         #        case Types::Guid:
         #            ret = any2guid(value);
@@ -544,9 +534,9 @@ Formatversion: 1
         #            break;
         #        case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
         #            if( insideLoop )
-        #                ret = SysResultSet::convert(resultSet.getDateTime(columnIdx), preferType);
+        #                ret = SysResultSet::convert(resultSet.getDate(columnIdx), preferType);
         #            else
-        #                ret = SysResultSet::getNull(Types::UtcDateTime, preferType);
+        #                ret = SysResultSet::getNull(Types::Date, preferType);
         #            break;
         #        case 45: // uniqueidentifier = AX GUID
         #            if( insideLoop )
@@ -603,10 +593,6 @@ Formatversion: 1
         #// возвращает аксаптовское null-значение для указанной колонки
         #public static anytype getNull(types t, Types preferType = types::AnyType)
         #{
-        #    if( preferType == Types::Date && t == types::UtcDateTime )
-        #    {
-        #        return DateNull();
-        #    }
         #    return nullValueBaseType(t, true);
         #}
       ENDSOURCE

@@ -1,5 +1,5 @@
-// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
-// mazzy, v1.02-ax6, 24.04.2016
+﻿// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
+// mazzy, v1.02-ax4, 24.04.2016
 //
 // Disclimer:
 // Конечно надо было бы показать обращение к внешней базе - Oracle, MS SQL, Access, DBF и прочее
@@ -43,5 +43,5 @@ static void tutorial_SysResultSet_Legacy(Args _args)
         progress.incCount();
     }
     endLengthyOperation();
-    info(strfmt("%1 records done.", progress.getCount_RU()));
+    info("done.");
 }

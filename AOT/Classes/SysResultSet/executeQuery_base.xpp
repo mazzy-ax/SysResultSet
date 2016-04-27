@@ -1,4 +1,4 @@
-server public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
+﻿server public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
 {
     SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
 

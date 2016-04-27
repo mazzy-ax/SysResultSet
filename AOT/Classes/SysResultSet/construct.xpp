@@ -1,4 +1,4 @@
-public static SysResultSet construct(ResultSet _resultSet)
+﻿public static SysResultSet construct(ResultSet _resultSet)
 {
     return new SysResultSet(_resultSet);
 }

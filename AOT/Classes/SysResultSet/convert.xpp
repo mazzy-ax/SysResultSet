@@ -1,4 +1,4 @@
-// values хранит даты как в SQL - с типом dateTime. нужно сконвертировать
+﻿// values хранит даты как в SQL - с типом dateTime. нужно сконвертировать
 public static anytype convert(AnyType value, Types preferType = types::AnyType)
 {
     anytype ret;
@@ -16,8 +16,8 @@ public static anytype convert(AnyType value, Types preferType = types::AnyType)
         case Types::RString:
             ret = any2str(value);
             break;
+        case Types::DateTime:
         case Types::Integer:
-        case Types::Time:
             ret = any2int(value);
             break;
         case Types::Int64:
@@ -33,16 +33,7 @@ public static anytype convert(AnyType value, Types preferType = types::AnyType)
                 ret = any2enum(value);
             break;
         case Types::Date:
-            if( typeOf(value) == Types::UtcDateTime )
-                ret = datetimeutil::date(value);
-            else
-                ret = any2date(value);
-            break;
-        case Types::UtcDateTime:
-            if( typeOf(value) == Types::Date )
-                ret = datetimeutil::date(value);
-            else
-                ret = DateTimeUtil::anyToDateTime(value);
+            ret = any2date(value);
             break;
         case Types::Guid:
             ret = any2guid(value);

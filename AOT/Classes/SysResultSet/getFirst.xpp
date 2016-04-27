@@ -1,4 +1,4 @@
-public static anytype getFirst(str sqlStatement, str columnName = "", Connection connection = new Connection())
+﻿public static anytype getFirst(str sqlStatement, str columnName = "", Connection connection = new Connection())
 {
     SysResultSet  res;
 

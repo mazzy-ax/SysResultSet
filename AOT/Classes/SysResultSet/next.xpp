@@ -1,4 +1,4 @@
-public boolean next()
+﻿public boolean next()
 {
     insideLoop = resultSet.next();  // выбираем следующую запись
 

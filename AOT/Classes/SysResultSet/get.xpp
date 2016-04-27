@@ -1,4 +1,4 @@
-// метод выполняет преобразование, необходимое для чтения из resultSet
+﻿// метод выполняет преобразование, необходимое для чтения из resultSet
 //
 // у стандартного класса ResultSet есть особенности:
 // 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
@@ -56,9 +56,9 @@ public static AnyType get( ResultSet  resultSet,
             break;
         case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
             if( insideLoop )
-                ret = SysResultSet::convert(resultSet.getDateTime(columnIdx), preferType);
+                ret = SysResultSet::convert(resultSet.getDate(columnIdx), preferType);
             else
-                ret = SysResultSet::getNull(Types::UtcDateTime, preferType);
+                ret = SysResultSet::getNull(Types::Date, preferType);
             break;
         case 45: // uniqueidentifier = AX GUID
             if( insideLoop )

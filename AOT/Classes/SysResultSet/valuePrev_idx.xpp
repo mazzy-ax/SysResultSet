@@ -1,4 +1,4 @@
-// возвращает значение, которое было в resultSet до выполнения метода next()
+﻿// возвращает значение, которое было в resultSet до выполнения метода next()
 // этот метод можно вызывать до самого первого выполнения next()
 public anytype valuePrev_idx(int columnIdx, Types preferType = types::AnyType)
 {

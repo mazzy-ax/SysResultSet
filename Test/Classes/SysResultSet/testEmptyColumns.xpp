@@ -1,4 +1,4 @@
-void testEmptyColumns()
+﻿void testEmptyColumns()
 {
     SysResultSet    resultSet = SysResultSet::executeQuery(@"select '' as str, 1 as num where 1 = 2");
 ;

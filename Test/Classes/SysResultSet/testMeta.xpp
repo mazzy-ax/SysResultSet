@@ -1,4 +1,4 @@
-void testMeta()
+﻿void testMeta()
 {
     SqlSystem           sql = new SqlSystem();
     CustTrans           trans;
@@ -11,9 +11,9 @@ void testMeta()
 
     resultSet = SysResultSet::executeQuery(strfmt(@"
         select top 10 accountNum, transDate, sum(amountMST) as amountMST, count(*) from CUSTTRANS
-        where PARTITION = %1 and DATAAREAID = %2
+        where DATAAREAID = %1
         group by accountNum, transDate
-        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+        ", sql.sqlLiteral(trans.dataAreaId)));
 
     this.assertNotNull(resultSet, "resultSet не создан");
     this.assertNotNull(resultSet.resultSet(), "resultSet() не создан");
@@ -50,7 +50,7 @@ void testMeta()
         this.assertEquals("accountNum",         resultSet.values().fieldName(1), strfmt("%1: имя значения1 после next", lineCount));
         this.assertEquals(Types::String,        resultSet.values().fieldType(1), strfmt("%1: тип значения1 после next", lineCount));
         this.assertEquals("transDate",          resultSet.values().fieldName(2), strfmt("%1: имя значения2 после next", lineCount));
-        this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), strfmt("%1: тип значения2 после next", lineCount));
+        this.assertEquals(Types::Date,          resultSet.values().fieldType(2), strfmt("%1: тип значения2 после next", lineCount));
         this.assertEquals("amountMST",          resultSet.values().fieldName(3), strfmt("%1: имя значения3 после next", lineCount));
         this.assertEquals(Types::Real,          resultSet.values().fieldType(3), strfmt("%1: тип значения3 после next", lineCount));
         this.assertEquals("4",                  resultSet.values().fieldName(4), strfmt("%1: имя значения4 после next", lineCount));
@@ -81,7 +81,7 @@ void testMeta()
     this.assertEquals("accountNum",         resultSet.values().fieldName(1), "имя значения1 после цикла");
     this.assertEquals(Types::String,        resultSet.values().fieldType(1), "тип значения1 после цикла");
     this.assertEquals("transDate",          resultSet.values().fieldName(2), "имя значения2 после цикла");
-    this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), "тип значения2 после цикла");
+    this.assertEquals(Types::Date,          resultSet.values().fieldType(2), "тип значения2 после цикла");
     this.assertEquals("amountMST",          resultSet.values().fieldName(3), "имя значения3 после цикла");
     this.assertEquals(Types::Real,          resultSet.values().fieldType(3), "тип значения3 после цикла");
     this.assertEquals("4",                  resultSet.values().fieldName(4), "имя значения4 после цикла");

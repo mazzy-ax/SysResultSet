@@ -1,4 +1,4 @@
-static void main(Args args)
+Ôªøstatic void main(Args args)
 {
     SysTestRunner       runner      = new SysTestRunner(classstr(SysResultSetTest));
     SysTestListenerDB   listener    = new SysTestListenerDB();
@@ -9,6 +9,6 @@ static void main(Args args)
 
     sysTestJobTable = SysTestJobTable::find(listener.parmJobId());
     infolog.add( sysTestJobTable.Status == SysTestStatus::Passed ? Exception::Info : Exception::Warning,
-                 strfmt("%3: “ÂÒÚ Á‡‚Â¯ÂÌ. %1:%2", sysTestJobTable.TestJobId, sysTestJobTable.Name, sysTestJobTable.Status),
+                 strfmt("%3: –¢–µ—Å—Ç –∑–∞–≤–µ—Ä—à–µ–Ω. %1:%2", sysTestJobTable.TestJobId, sysTestJobTable.Name, sysTestJobTable.Status),
                  '', SysInfoAction_TableField::newBuffer(sysTestJobTable) );
 }

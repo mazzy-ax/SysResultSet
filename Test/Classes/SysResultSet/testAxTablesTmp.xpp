@@ -13,9 +13,9 @@
         select top 10
             t.AccountNum, sum(t.AmountMST) as Balance02
         from CUSTTRANS as t
-        where t.PARTITION = %1 and t.DATAAREAID = %2
+        where t.DATAAREAID = %1
         group by AccountNum
-        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+        ", sql.sqlLiteral(trans.dataAreaId)));
 
     this.assertNotNull(resultSet, "resultSet не создан");
 
