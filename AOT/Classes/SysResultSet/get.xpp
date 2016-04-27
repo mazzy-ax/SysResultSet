@@ -1,4 +1,4 @@
-// метод выполняет преобразование, необходимое для чтения из resultSet
+﻿// метод выполняет преобразование, необходимое для чтения из resultSet
 //
 // у стандартного класса ResultSet есть особенности:
 // 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
@@ -56,22 +56,12 @@ public static AnyType get( ResultSet  resultSet,
             break;
         case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
             if( insideLoop )
-                ret = SysResultSet::convert(resultSet.getDateTime(columnIdx), preferType);
+                ret = SysResultSet::convert(resultSet.getDate(columnIdx), preferType);
             else
-                ret = SysResultSet::getNull(Types::UtcDateTime, preferType);
+                ret = SysResultSet::getNull(Types::DateTime, preferType);
             break;
         case 45: // uniqueidentifier = AX GUID
-            if( insideLoop )
-                ret = SysResultSet::convert(resultSet.getGuid(columnIdx), preferType);
-            else
-                ret = SysResultSet::getNull(Types::Guid, preferType);
-            break;
         case 49: // bigint = AX int64
-            if( insideLoop )
-                ret = SysResultSet::convert(resultSet.getInt64(columnIdx), preferType);
-            else
-                ret = SysResultSet::getNull(Types::Int64, preferType);
-            break;
         case  7: // varbinary = AX container. resultSet не умеет!
         default:
             throw error(error::wrongUseOfFunction(funcname())); // не смогли понять что за тип

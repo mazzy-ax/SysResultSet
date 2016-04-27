@@ -1,4 +1,4 @@
-// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+﻿// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
 // в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
 // Например, "myTable_%1"
 str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)

@@ -1,4 +1,4 @@
-public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
+﻿public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
 {
     return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // не проверяем номер колонки. пусть лучше ругнется когда программа обращается к несуществующей колонке
 }

@@ -1,4 +1,4 @@
-public ResultSet resultSet()
+﻿public ResultSet resultSet()
 {
     return resultSet;
 }

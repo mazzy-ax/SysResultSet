@@ -1,26 +1,26 @@
-п»їExportfile for AOT version 1.0 or later
+Exportfile for AOT version 1.0 or later
 Formatversion: 1
 
 ***Element: JOB
 
-; Microsoft Dynamics AX Job: tutorial_SysResultSet_Legacy unloaded
+; Microsoft Business Solutions-Axapta Job: tutorial_SysResultSet_Legacy unloaded at Wednesday 27.04.2016
 ; --------------------------------------------------------------------------------
   JOBVERSION 1
   
   SOURCE #tutorial_SysResultSet_Legacy
-    #// РїСЂРёРјРµСЂ СЂР°Р±РѕС‚С‹ SysResultSet СЃ СѓРЅР°СЃР»РµРґРѕРІР°РЅРЅС‹Рј РєРѕРґРѕРј, РєРѕС‚РѕСЂС‹Р№ СѓР¶Рµ СЂР°Р±РѕС‚Р°РµС‚ СЃ ResultSet
-    #// mazzy, v1.02-ax6, 24.04.2016
+    #// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
+    #// mazzy, v1.02-ax3, 24.04.2016
     #//
     #// Disclimer:
-    #// РљРѕРЅРµС‡РЅРѕ РЅР°РґРѕ Р±С‹Р»Рѕ Р±С‹ РїРѕРєР°Р·Р°С‚СЊ РѕР±СЂР°С‰РµРЅРёРµ Рє РІРЅРµС€РЅРµР№ Р±Р°Р·Рµ - Oracle, MS SQL, Access, DBF Рё РїСЂРѕС‡РµРµ
-    #// РќРѕ resultSet СЃРѕ РІСЃРµРјРё Р±Р°Р·Р°РјРё СЂР°Р±РѕС‚Р°РµС‚ РѕРґРёРЅР°РєРѕРІРѕ. РћС‚Р»РёС‡Р°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ connection.
-    #// Р§С‚РѕР±С‹ РЅРµ СѓСЃР»РѕР¶РЅСЏС‚СЊ РїСЂРёРјРµСЂ СѓСЃС‚Р°РЅРѕРІРѕРєРѕР№ Р±Р°Р·С‹ Рё РЅРµ РїРѕСЃС‚Р°РІР»СЏС‚СЊ РѕС‚РґРµР»СЊРЅС‹Р№ С„Р°Р№Р» СЃ Р±Р°Р·РѕР№
-    #// С‡С‚РµРЅРёРµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РёР· Р°РєСЃР°РїС‚РѕРІСЃРєРёС… С‚Р°Р±Р»РёС†.
+    #// Конечно надо было бы показать обращение к внешней базе - Oracle, MS SQL, Access, DBF и прочее
+    #// Но resultSet со всеми базами работает одинаково. Отличаются только connection.
+    #// Чтобы не усложнять пример установокой базы и не поставлять отдельный файл с базой
+    #// чтение выполняется из аксаптовских таблиц.
     #//
     #static void tutorial_SysResultSet_Legacy(Args _args)
     #{
     #    #AVIfiles
-    #    Connection                      conn        = new Connection(); // РІ СЂРµР°Р»СЊРЅРѕРј РєРѕРґРµ Р·РґРµСЃСЊ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ ODBCconnection, OCIconnection СЃРѕ СЃРІРѕРёРјРё connectionString...
+    #    Connection                      conn        = new Connection(); // в реальном коде здесь должно быть ODBCconnection, OCIconnection со своими connectionString...
     #    ResultSet                       resultSet;
     #
     #    str                             sqlStr      = @"select top 10 * from VENDTRANS as t";
@@ -36,29 +36,25 @@ Formatversion: 1
     #    //legacy: permission.assert();
     #    //legacy: sqlStatement = conn.createStatement();
     #    //legacy: resultSet = sqlStatement.executeQuery(sqlStr);
-    #    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // РјРѕР¶РЅРѕ Р·РЅР°С‡РёС‚РµР»СЊРЅРѕ СѓРїСЂРѕСЃС‚РёС‚СЊ РєРѕРґ Рё СЃРѕСЃС‚Р°РІ РїРµСЂРµРјРµРЅРЅС‹С…
+    #    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // можно значительно упростить код и состав переменных
     #
     #    while( resultSet.next() )
     #    {
-    #        // legacyCode - РѕР±СЂР°С‚РёС‚Рµ РІРЅРёРјР°РЅРёРµ, С‡С‚Рѕ РєРѕР»РѕРЅРєРё С‡РёС‚Р°СЋС‚СЃСЏ РІ РІРѕР·СЂР°СЃС‚Р°СЋС‰РµРј РїРѕСЂСЏРґРєРµ Рё РєР°Р¶РґР°СЏ РєРѕР»РѕРЅРєР° С‡РёС‚Р°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·
+    #        // legacyCode - обратите внимание, что колонки читаются в возрастающем порядке и каждая колонка читается только один раз
     #        // ... = resultSet.getString(1)
     #        // ... = resultSet.getInt(2)
     #        // ... = resultSet.getReal(3)
     #        //
-    #        // РІС‹ С…РѕС‚РёС‚Рµ РґРѕР±Р°РІРёС‚СЊ РѕР±СЂР°Р±РѕС‚РєСѓ СЃРІРѕРёС… С‚РѕР»СЊРєРѕ С‡С‚Рѕ РґРѕР±Р°РІР»РµРЅРЅС‹С… РїРѕР»РµР№
+    #        // вы хотите добавить обработку своих только что добавленных полей
     #        info(strFmt("%1", SysResultSet::get(resultSet, 4)));
     #        info(strFmt("%1", SysResultSet::get(resultSet, 5)));
-    #        // С‡С‚РѕР±С‹ РїРѕР»СѓС‡Р°С‚СЊ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РёРјРµРЅР°Рј, РІСЃРµ С‚Р°РєРё РїСЂРёРґРµС‚СЃСЏ РёР·РјРµРЅРёС‚СЊ С‚РёРї РїРµСЂРµРјРµРЅРЅРѕР№ resultSet РЅР° SysResultSet.
+    #        // чтобы получать значения по именам, все таки придется изменить тип переменной resultSet на SysResultSet.
     #
     #        progress.incCount();
     #    }
     #    endLengthyOperation();
-    #    info(strfmt("%1 records done.", progress.getCount_RU()));
+    #    info("done.");
     #}
   ENDSOURCE
-  PROPERTIES
-    Origin              #{11F9CA61-D5BD-49D5-BC92-4B4D69CFE2D0}
-  ENDPROPERTIES
-  
 
 ***Element: END

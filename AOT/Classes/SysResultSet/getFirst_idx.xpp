@@ -1,4 +1,4 @@
-public static anytype getFirst_idx(str sqlStatement, int columnIdx = 1, Connection connection = new Connection())
+﻿public static anytype getFirst_idx(str sqlStatement, int columnIdx = 1, Connection connection = new Connection())
 {
     SysResultSet  res = SysResultSet::executeQuery(sqlStatement, connection);
 

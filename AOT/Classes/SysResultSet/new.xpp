@@ -1,4 +1,4 @@
-void new(ResultSet _resultSet)
+﻿void new(ResultSet _resultSet)
 {;
     resultSet  = _resultSet;
 }

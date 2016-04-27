@@ -1,4 +1,4 @@
-public boolean inLoop()
+﻿public boolean inLoop()
 {
     return insideLoop;
 }

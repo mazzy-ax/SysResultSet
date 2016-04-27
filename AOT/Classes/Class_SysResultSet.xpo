@@ -1,27 +1,27 @@
-п»їExportfile for AOT version 1.0 or later
+Exportfile for AOT version 1.0 or later
 Formatversion: 1
 
 ***Element: CLS
 
-; Microsoft Dynamics AX Class: SysResultSet unloaded
+; Microsoft Business Solutions-Axapta Class: SysResultSet unloaded at Wednesday 27.04.2016
 ; --------------------------------------------------------------------------------
   CLSVERSION 1
   
   CLASS #SysResultSet
     PROPERTIES
       Name                #SysResultSet
-      RunOn               #Server
-      Origin              #{C26373C2-637B-44D6-9D3F-CD9BB352BD62}
-      LegacyId            #53944
+      Extends             #
+      RunOn               #Called from
     ENDPROPERTIES
     
     METHODS
+      Version: 3
       SOURCE #binds
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ map(columnName, SysDictField) - РїСЂРёРІСЏР·РєРё Рє РїРѕР»СЏРј РґР»СЏ РєРѕР»РѕРЅРѕРє resultSet
-        #// РґР»СЏ РєР°Р¶РґРѕРіРѕ РєР»СЋС‡Р° [tableId, formatColumnName] С…СЂР°РЅРёС‚СЃСЏ РѕС‚РґРµР»СЊРЅС‹Р№ map
+        #// возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
+        #// для каждого ключа [tableId, formatColumnName, dbBackend] хранится отдельный map
         #//
-        #// РµСЃР»Рё РґР»СЏ РґР°РЅРЅРѕРіРѕ РєР»СЋС‡Р° map РµС‰Рµ РЅРµ СЃРѕР·РґР°РІР°Р»СЃСЏ, С‚Рѕ СЃРѕР·РґР°СЃС‚ map,
-        #// СЃРѕРґРµСЂР¶Р°С‰РёР№ РІСЃРµ РІРѕР·РјРѕР¶РЅС‹Рµ РїР°СЂС‹, РґР»СЏ РєРѕС‚РѕСЂС‹С… РЅР°Р·РІР°РЅРёСЏ Рё С‚РёРїС‹ СЃРѕРІРїР°РґР°СЋС‚
+        #// если для данного ключа map еще не создавался, то создаст map,
+        #// содержащий все возможные пары, для которых названия и типы совпадают
         #Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
         #    container       key     = [rec.TableId, formatColumnName, dbBackend];
@@ -39,19 +39,19 @@ Formatversion: 1
         #
         #    Debug::assert(this.metaData() != null);
         #
-        #    // СЃРѕР·РґР°РµРј РїСЂРёРІСЏР·РєРё РїРѕР»РµР№ Рє РєРѕР»РѕРЅРєР°Рј resultSet
-        #    binds  = new Map(Types::String, Types::Class);           // РїРѕР»СЏ СЃ РїСЂРёРІСЏР·РєРѕР№
+        #    // создаем привязки полей к колонкам resultSet
+        #    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
         #    dt = SysDictTable::newTableId(rec.tableId);
-        #    if( dt.isTmp() && !dt.isTempDb() )
+        #    if( dt.isTmp() )
         #    {
-        #        dbBackend = DbBackend::Native;                       // РґР»СЏ РІСЂРµРјРµРЅРЅРѕР№ С‚Р°Р±Р»РёС†С‹ РЅРµС‚ SQL-РёРјРµРЅ. РїРѕСЌС‚РѕРјСѓ РёСЃРїРѕР»СЊР·СѓРµРј РђРєСЃР°РїС‚РѕРІСЃРєРёРµ
+        #        dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
         #    }
         #    for(i=1; i<=dt.columnCnt(); ++i )
         #    {
         #        df = new SysDictField(dt.id(), dt.column2id(i));
         #        columnName = this.nameByField(df, formatColumnName, dbBackend);
         #        if( this.copyAllowed(columnName, df) )
-        #            binds.insert(columnName, df);                    // РґРѕР±Р°РІР»СЏРµРј С‚РѕР»СЊРєРѕ С‚Рµ РїРѕР»СЏ, РєРѕС‚РѕСЂС‹Рµ РёРјРµСЋС‚ РїСЂРёРІСЏР·РєСѓ Рє resultSet
+        #            binds.insert(columnName, df);                    // добавляем только те поля, которые имеют привязку к resultSet
         #    }
         #
         #    bindsAll.insert(key, binds);
@@ -59,28 +59,24 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #classDeclaration
-        #// РљР»Р°СЃСЃ-РѕР±РµСЂС‚РєР° РІРѕРєСЂСѓРі СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ resultSet:
-        #// * РїРѕР·РІРѕР»СЏРµС‚ СѓРґРѕР±РЅРѕ СЂР°Р±РѕС‚Р°С‚СЊ СЃ resultSet, С‡РёС‚Р°С‚СЊ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РёРјРµРЅР°Рј РєРѕР»РѕРЅРѕРє, Р° РЅРµ С‚РѕР»СЊРєРѕ РїРѕ РёРЅРґРµРєСЃСѓ РєРѕР»РѕРЅРєРё
-        #// * СЂРµР°Р»РёР·СѓРµС‚ РѕРґРёРЅ РјРµС‚РѕРґ get РґР»СЏ С‡С‚РµРЅРёСЏ Р·РЅР°С‡РµРЅРёР№ СЂР°Р·РЅС‹С… С‚РёРїРѕРІ (СЃРј. РјРµС‚РѕРґ ::getColumn())
-        #// * РїРѕР·РІРѕР»СЏРµС‚ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ СЃС‚Р°С‚РёС‡РµСЃРєРёРµ РјРµС‚РѕРґС‹ РІ СЃС‚Р°СЂРѕРј РєРѕРґРµ, РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚ СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ resultSet
-        #// Р° С‚Р°РєР¶Рµ РѕР±С…РѕРґРёС‚ "РѕСЃРѕР±РµРЅРЅРѕСЃС‚Рё" СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ resultSet
-        #// 1. РєР°Р¶РґРѕРµ РїРѕР»Рµ РІ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРј resultSet РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·. РїСЂРё РїРѕРїС‹С‚РєРµ РїРѕРІС‚РѕСЂРЅРѕРіРѕ С‡С‚РµРЅРёСЏ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°
-        #// 2. РїРѕР»СЏ РІ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРј resultSEt РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РІ РїРѕСЂСЏРґРєРµ РІРѕР·СЂР°СЃС‚Р°РЅРёСЏ РЅРѕРјРµСЂРѕРІ.
-        #//    РµСЃР»Рё СЃРЅР°С‡Р°Р»Р° СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 2, Р° Р·Р°С‚РµРј РїРѕРїС‹С‚Р°С‚СЊСЃСЏ СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 1, С‚Рѕ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°.
+        #// Класс-обертка вокруг стандартного resultSet:
+        #// * позволяет удобно работать с resultSet, читать значения по именам колонок, а не только по индексу колонки
+        #// * реализует один метод get для чтения значений разных типов (см. метод ::getColumn())
+        #// * позволяет использовать статические методы в старом коде, который использует стандартный resultSet
+        #// а также обходит "особенности" стандартного resultSet
+        #// 1. каждое поле в стандартном resultSet можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля в стандартном resultSEt можно читать только в порядке возрастания номеров.
+        #//    если сначала считать поле с номером 2, а затем попытаться считать поле с номером 1, то возникает ошибка.
         #//
-        #// РђРІС‚РѕСЂ РїРµСЂРІРѕРіРѕ РІР°СЂРёР°РЅС‚Р° РѕР±РµСЂС‚РєРё - Р РѕРјР°РЅ Р”РѕР»РіРѕРїРѕР»РѕРІ rdol (db - http://axforum.info/forums/member.php?u=2836)
-        #// РІ РїРµСЂРІРѕРј РІР°СЂРёР°РЅС‚Рµ Р±С‹Р» СЂРµР°Р»РёР·РѕРІР°РЅ РѕРґРёРЅ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РјРµС‚РѕРґ get РїСЂРё РїРѕРјРѕС‰Рё resultSetMetaData
+        #// Автор первого варианта обертки - Роман Долгополов rdol (db - http://axforum.info/forums/member.php?u=2836)
+        #// в первом варианте был реализован один универсальный метод get при помощи resultSetMetaData
         #//
-        #// РџРѕР»РЅС‹Р№ СЂРµС„Р°РєС‚РѕСЂРёРЅРі РєР»Р°СЃСЃР°-РѕР±РµСЂС‚РєРё - mazzy (http://axforum.info/forums/member.php?u=10)
+        #// Полный рефакторинг класса-обертки - mazzy (http://axforum.info/forums/member.php?u=10)
         #// Struct values, binds, nameByField, copyTo, getNull, getPrev,
-        #// СЃС‚Р°С‚РёС‡РµСЃРєРёРµ РјРµС‚РѕРґС‹ РґР»СЏ РІС‹РїРѕР»РЅРµРЅРёСЏ Р·Р°РїСЂРѕСЃР°, РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РµРґРёРЅСЃС‚РІРµРЅРЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ,
-        #// СЃС‚Р°С‚РёС‡РµСЃРєРёРµ РјРµС‚РѕРґС‹ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃРѕ СЃС‚Р°РЅРґР°СЂС‚РЅС‹Рј resultSet РІ СѓРЅР°СЃР»РµРґРѕРІР°РЅРЅРѕРј РєРѕРґРµ
+        #// статические методы для выполнения запроса, для получения единственного значения,
+        #// статические методы для работы со стандартным resultSet в унаследованном коде
         #//
-        #// Р’РЅРёРјР°РЅРёРµ! РґР»СЏ СЂР°Р±РѕС‚С‹ Р±Р°Р·РѕРІРѕРіРѕ РєР»Р°СЃСЃР° ResultSet С‚СЂРµР±СѓРµС‚СЃСЏ СЂР°Р·СЂРµС€РµРЅРёРµ SqlStatementExecutePermission
-        #// СЌС‚Рѕ СЂР°Р·СЂРµС€РµРЅРёРµ РІС‹РґР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РЅР° СЃРµСЂРІРµСЂРµ.
-        #// РЎР»РµРґРёС‚Рµ Р·Р° С‚РµРј, С‡С‚РѕР±С‹ РѕР±СЉРµРєС‚С‹ СЌС‚РѕРіРѕ РєР»Р°СЃСЃР° СЃРѕР·РґР°РІР°Р»РёСЃСЊ РЅР° СЃРµСЂРІРµСЂРµ, С‡С‚РѕР±С‹ РЅРµ РіРµРЅРµСЂРёСЂРѕРІР°С‚СЊ Р»РёС€РЅРµРіРѕ С‚СЂР°С„РёРєР° РјРµР¶РґСѓ РєР»РёРµРЅС‚РѕРј Рё СЃРµСЂРІРµСЂРѕРј.
-        #//
-        #// mazzy, v1.03-ax6, 27.04.2016
+        #// mazzy, v1.03-ax3, 24.04.2016
         #class SysResultSet
         #{
         #    #define.NA(0)
@@ -88,12 +84,12 @@ Formatversion: 1
         #    ResultSet           resultSet;
         #    ResultSetMetaData   metaData;
         #
-        #    boolean             insideLoop;     // next Р±С‹Р» РІС‹РїРѕР»РЅРµРЅ СѓСЃРїРµС€РЅРѕ?
+        #    boolean             insideLoop;     // next был выполнен успешно?
         #
-        #    Struct              values;         // Р·РЅР°С‡РµРЅРёСЏ РїРѕСЃР»Рµ next.
-        #    Struct              valuesPrev;     // Р·РЅР°С‡РµРЅРёСЏ РґРѕ next.
+        #    Struct              values;         // значения после next.
+        #    Struct              valuesPrev;     // значения до next.
         #
-        #    Map                 bindsAll;       // map([tableid, format], map(columnName, SysDictField)) - РїСЂРёРІСЏР·РєРё РґР»СЏ CopyTo
+        #    Map                 bindsAll;       // map([tableid, format], map(columnName, SysDictField)) - привязки для CopyTo
         #}
       ENDSOURCE
       SOURCE #close
@@ -108,7 +104,7 @@ Formatversion: 1
       SOURCE #copyAllowed
         #protected boolean copyAllowed(str columnName, SysDictField df)
         #{
-        #    if( df && columnName && this.values().exists(columnName) && df.saveContents() && df.isSql() && !df.isSystem() )
+        #    if( df && columnName && this.values().exists(columnName) && df.isSql() && !df.isSystem() )
         #    {
         #        switch( this.typeOf(columnName) )
         #        {
@@ -124,31 +120,24 @@ Formatversion: 1
         #                }
         #
         #            case Types::Integer:
-        #            case Types::Time:
         #            case Types::Enum:
         #                switch( df.baseType() )
         #                {
         #                    case Types::Integer:
         #                    case Types::Real:
         #                    case Types::Enum:
-        #                    case Types::Int64:
-        #                    case Types::Time:
         #                        return true;
         #                }
-        #            case Types::UtcDateTime:
         #            case Types::Date:
         #                switch( df.baseType() )
         #                {
-        #                    case Types::UtcDateTime:
         #                    case Types::Date:
         #                        return true;
         #                }
+        #            case Types::DateTime:
+        #                return df.baseType() == Types::DateTime;
         #            case Types::Real:
         #                return df.baseType() == Types::Real;
-        #            case Types::Guid:
-        #                return df.baseType() == Types::Guid;
-        #            case Types::Int64:
-        #                return df.baseType() == Types::Int64;
         #            case Types::Container:
         #                return df.baseType() == Types::Container;
         #        }
@@ -157,14 +146,14 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #copyTo
-        #// Р·Р°РїРѕР»РЅСЏРµС‚ РїРѕР»СЏ РІ СѓРєР°Р·Р°РЅРЅРѕР№ С‚Р°Р±Р»РёС†Рµ РёР· РєРѕР»РѕРЅРѕРє resultSet
-        #// Р’РЅРёРјР°РЅРёРµ! РјРµС‚РѕРґ РІС‹Р·С‹РІР°РµС‚ mofidiedField, РµСЃР»Рё РЅР° С‚Р°Р±Р»РёС†Рµ РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅ skipDaraMethods(true)
+        #// заполняет поля в указанной таблице из колонок resultSet
+        #// Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
         #//
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ С‡РёСЃР»Рѕ РїРѕР»РµР№, РґР»СЏ РєРѕС‚РѕСЂС‹С… Р±С‹Р»Рѕ РІС‹РїРѕР»РЅРµРЅРѕ РєРѕРїРёСЂРѕРІР°РЅРёРµ
+        #// возвращает число полей, для которых было выполнено копирование
         #//
-        #// Р°СЂРіСѓРјРµРЅС‚ formatColumnName СЃРѕРґРµСЂР¶РёС‚ СЃС‚СЂРѕРєСѓ, РєРѕС‚РѕСЂР°СЏ РїРѕР·РІРѕР»РёС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РёРјСЏ РїРѕР»СЏ С‚Р°Р±Р»РёС†С‹ РІ РёРјСЏ РєРѕР»РѕРЅРєРё resultSet
-        #// РІ СЃС‚СЂРѕРєРµ РјРѕР¶РµС‚ СЃРѕРґРµСЂР¶Р°С‚СЃСЏ %1. РІРјРµСЃС‚Рѕ %1 Р±СѓРґРµС‚ РїРѕРґСЃС‚Р°РІР»РµРЅРѕ РёРјСЏ РїРѕР»СЏ РІ SQL.
-        #// РќР°РїСЂРёРјРµСЂ, "myTable_%1"
+        #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+        #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+        #// Например, "myTable_%1"
         #int copyTo(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
         #    Map             binds   = this.binds(rec, formatColumnName, dbBackend);
@@ -180,36 +169,36 @@ Formatversion: 1
         #
       ENDSOURCE
       SOURCE #copyToField
-        #// РІС‹РїРѕР»РЅСЏРµС‚ РїСЂРѕРІРµСЂРєРё Рё Р·Р°РїРѕР»РЅСЏРµС‚ РїРѕР»Рµ РІ СѓРєР°Р·Р°РЅРЅРѕР№ С‚Р°Р±Р»РёС†Рµ РёР· РєРѕР»РѕРЅРѕРє resultSet
-        #// Р’РЅРёРјР°РЅРёРµ! РјРµС‚РѕРґ РІС‹Р·С‹РІР°РµС‚ mofidiedField, РµСЃР»Рё РЅР° С‚Р°Р±Р»РёС†Рµ РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅ skipDaraMethods(true)
+        #// выполняет проверки и заполняет поле в указанной таблице из колонок resultSet
+        #// Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
         #//
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ С‡РёСЃР»Рѕ СЃРєРѕРїРёСЂРѕРІР°РЅРЅС‹С… РїРѕР»РµР№:
-        #// = 1, РµСЃР»Рё РєРѕРїРёСЂРѕРІР°РЅРёРµ Р±С‹Р»Рѕ РІС‹РїРѕР»РЅРµРЅРѕ
-        #// = 0, РµСЃР»Рё РєРѕРїРёСЂРѕРІР°РЅРёРµ РЅРµ Р±С‹Р»Рѕ РІС‹РїРѕР»РЅРµРЅРѕ
+        #// возвращает число скопированных полей:
+        #// = 1, если копирование было выполнено
+        #// = 0, если копирование не было выполнено
         #//
-        #// Р°СЂРіСѓРјРµРЅС‚ formatColumnName СЃРѕРґРµСЂР¶РёС‚ СЃС‚СЂРѕРєСѓ, РєРѕС‚РѕСЂР°СЏ РїРѕР·РІРѕР»РёС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РёРјСЏ РїРѕР»СЏ С‚Р°Р±Р»РёС†С‹ РІ РёРјСЏ РєРѕР»РѕРЅРєРё resultSet
-        #// РІ СЃС‚СЂРѕРєРµ РјРѕР¶РµС‚ СЃРѕРґРµСЂР¶Р°С‚СЃСЏ %1. РІРјРµСЃС‚Рѕ %1 Р±СѓРґРµС‚ РїРѕРґСЃС‚Р°РІР»РµРЅРѕ РёРјСЏ РїРѕР»СЏ РІ SQL.
-        #// РќР°РїСЂРёРјРµСЂ, "myTable_%1"
+        #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+        #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+        #// Например, "myTable_%1"
         #int copyToField(str columnName, Common rec, SysDictField df)
         #{
         #    anyType oldValue;
         #    anyType newValue;
         #;
-        #    Debug::assert(this.metaData() != null);  // РјРµС‚РѕРґ get РґРѕР»Р¶РµРЅ РІС‹Р·С‹РІР°С‚СЊСЃСЏ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ СѓРґР°С‡РЅРѕРіРѕ next
+        #    Debug::assert(this.metaData() != null);  // метод get должен вызываться только после удачного next
         #    Debug::assert(df != null);
         #    Debug::assert(rec.TableId == df.tableid());
         #
         #    if( this.copyAllowed(columnName, df) )
         #    {
         #        oldValue = rec.(df.extendedFieldId());
-        #        newValue = this.value(columnName, df.baseType());    // С‡РёС‚Р°РµРј РёР· resultSet
+        #        newValue = this.value(columnName, df.baseType());    // читаем из resultSet
         #
         #        if( oldValue != newValue )
         #        {
-        #            rec.(df.extendedFieldId()) = newValue;          // Р·Р°РїРёСЃС‹РІР°РµРј Р·РЅР°С‡РµРЅРёРµ РІ РїРѕР»Рµ
+        #            rec.(df.extendedFieldId()) = newValue;          // записываем значение в поле
         #
         #            if( !rec.skipDataMethods() )
-        #                rec.modifiedField(df.extendedFieldId());    // РІС‹Р·С‹РІР°РµРј РјРµС‚РѕРґ modifiedField!!!!
+        #                rec.modifiedField(df.extendedFieldId());    // вызываем метод modifiedField!!!!
         #        }
         #        return 1;
         #    }
@@ -232,14 +221,14 @@ Formatversion: 1
       SOURCE #metaData
         #ResultSetMetaData metaData()
         #{
-        #    // Р·РЅР°С‡РµРЅРёРµ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РїРѕСЃР»Рµ СѓСЃРїРµС€РЅРѕРіРѕ next
+        #    // значение устанавливается после успешного next
         #    return metaData;
         #}
       ENDSOURCE
       SOURCE #nameByField
-        #// Р°СЂРіСѓРјРµРЅС‚ formatColumnName СЃРѕРґРµСЂР¶РёС‚ СЃС‚СЂРѕРєСѓ, РєРѕС‚РѕСЂР°СЏ РїРѕР·РІРѕР»РёС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РёРјСЏ РїРѕР»СЏ С‚Р°Р±Р»РёС†С‹ РІ РёРјСЏ РєРѕР»РѕРЅРєРё resultSet
-        #// РІ СЃС‚СЂРѕРєРµ РјРѕР¶РµС‚ СЃРѕРґРµСЂР¶Р°С‚СЃСЏ %1. РІРјРµСЃС‚Рѕ %1 Р±СѓРґРµС‚ РїРѕРґСЃС‚Р°РІР»РµРЅРѕ РёРјСЏ РїРѕР»СЏ РІ SQL.
-        #// РќР°РїСЂРёРјРµСЂ, "myTable_%1"
+        #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+        #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+        #// Например, "myTable_%1"
         #str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
         #    str columnName = df.name(dbBackend, df.arrayIndex());
@@ -259,15 +248,15 @@ Formatversion: 1
       SOURCE #next
         #public boolean next()
         #{
-        #    insideLoop = resultSet.next();  // РІС‹Р±РёСЂР°РµРј СЃР»РµРґСѓСЋС‰СѓСЋ Р·Р°РїРёСЃСЊ
+        #    insideLoop = resultSet.next();  // выбираем следующую запись
         #
-        #    if( !metaData )                 // РІС‹РїРѕР»РЅСЏРµРј С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·
+        #    if( !metaData )                 // выполняем только один раз
         #    {
         #        metaData = resultSet.getMetaData();
         #    }
         #
-        #    valuesPrev  = values;           // СЃРѕС…СЂР°РЅСЏРµРј СЃС‚Р°СЂРѕРµ Р·РЅР°С‡РµРЅРёРµ
-        #    values      = null;             // РЅРѕРІС‹Рµ Р·РЅР°С‡РµРЅРёСЏ РµС‰Рµ РЅРµ РїСЂРѕС‡РёС‚Р°РЅС‹
+        #    valuesPrev  = values;           // сохраняем старое значение
+        #    values      = null;             // новые значения еще не прочитаны
         #
         #    return insideLoop;
         #}
@@ -292,28 +281,28 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #value
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ РїРѕ РёРјРµРЅРё РєРѕР»РѕРЅРєРё РёР· Р·Р°СЂР°РЅРµРµ Р·Р°РїРѕР»РЅРµРЅРЅРѕРіРѕ values
+        #// возвращает значение по имени колонки из заранее заполненного values
         #//
-        #// Сѓ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ РєР»Р°СЃСЃР° ResultSet РµСЃС‚СЊ РѕСЃРѕР±РµРЅРЅРѕСЃС‚Рё:
-        #// 1. РєР°Р¶РґРѕРµ РїРѕР»Рµ РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·. РїСЂРё РїРѕРїС‹С‚РєРµ РїРѕРІС‚РѕСЂРЅРѕРіРѕ С‡С‚РµРЅРёСЏ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°
-        #// 2. РїРѕР»СЏ РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РІ РїРѕСЂСЏРґРєРµ РІРѕР·СЂР°СЃС‚Р°РЅРёСЏ РЅРѕРјРµСЂРѕРІ. РµСЃР»Рё СЃРЅР°С‡Р°Р»Р° СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 2, Р° Р·Р°С‚РµРј РїРѕРїС‹С‚Р°С‚СЊСЃСЏ
-        #//    СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 1, С‚Рѕ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°.
+        #// у стандартного класса ResultSet есть особенности:
+        #// 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+        #//    считать поле с номером 1, то возникает ошибка.
         #public anytype value(str columnName, Types preferType = types::AnyType)
         #{
-        #    return SysResultSet::convert(this.values().value(columnName), preferType); // РЅРµ РїСЂРѕРІРµСЂСЏРµРј РёРјСЏ. РїСѓСЃС‚СЊ Р»СѓС‡С€Рµ СЂСѓРіРЅРµС‚СЃСЏ РєРѕРіРґР° РїСЂРѕРіСЂР°РјРјР° РѕР±СЂР°С‰Р°РµС‚СЃСЏ Рє РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРјСѓ РёРјРµРЅРё
+        #    return SysResultSet::convert(this.values().value(columnName), preferType); // не проверяем имя. пусть лучше ругнется когда программа обращается к несуществующему имени
         #}
       ENDSOURCE
       SOURCE #value_idx
         #public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
         #{
-        #    return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // РЅРµ РїСЂРѕРІРµСЂСЏРµРј РЅРѕРјРµСЂ РєРѕР»РѕРЅРєРё. РїСѓСЃС‚СЊ Р»СѓС‡С€Рµ СЂСѓРіРЅРµС‚СЃСЏ РєРѕРіРґР° РїСЂРѕРіСЂР°РјРјР° РѕР±СЂР°С‰Р°РµС‚СЃСЏ Рє РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ РєРѕР»РѕРЅРєРµ
+        #    return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // не проверяем номер колонки. пусть лучше ругнется когда программа обращается к несуществующей колонке
         #}
       ENDSOURCE
       SOURCE #valueNull
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ Р°РєСЃР°РїС‚РѕРІСЃРєРѕРµ null-Р·РЅР°С‡РµРЅРёРµ РґР»СЏ СѓРєР°Р·Р°РЅРЅРѕР№ РєРѕР»РѕРЅРєРё
+        #// возвращает аксаптовское null-значение для указанной колонки
         #public anytype valueNull(str columnName, Types preferType = types::AnyType)
         #{
-        #    if( this.values().exists(columnName) )
+        #    if( columnName && this.values().exists(columnName) )
         #    {
         #        return SysResultSet::getNull(this.typeof(columnName), preferType);
         #    }
@@ -321,7 +310,7 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #valueNull_idx
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ Р°РєСЃР°РїС‚РѕРІСЃРєРѕРµ null-Р·РЅР°С‡РµРЅРёРµ РґР»СЏ СѓРєР°Р·Р°РЅРЅРѕР№ РєРѕР»РѕРЅРєРё
+        #// возвращает аксаптовское null-значение для указанной колонки
         #public anytype valueNull_idx(int columnIdx, Types preferType = types::AnyType)
         #{
         #    if( (1 <= columnIdx) && (columnIdx <= this.values().fields()) )
@@ -332,8 +321,8 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #valuePrev
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ, РєРѕС‚РѕСЂРѕРµ Р±С‹Р»Рѕ РІ resultSet РґРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ РјРµС‚РѕРґР° next()
-        #// СЌС‚РѕС‚ РјРµС‚РѕРґ РјРѕР¶РЅРѕ РІС‹Р·С‹РІР°С‚СЊ РґРѕ СЃР°РјРѕРіРѕ РїРµСЂРІРѕРіРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ next()
+        #// возвращает значение, которое было в resultSet до выполнения метода next()
+        #// этот метод можно вызывать до самого первого выполнения next()
         #public anytype valuePrev(str columnName, Types preferType = types::AnyType)
         #{
         #    if( valuesPrev && columnName )
@@ -344,8 +333,8 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #valuePrev_idx
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёРµ, РєРѕС‚РѕСЂРѕРµ Р±С‹Р»Рѕ РІ resultSet РґРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ РјРµС‚РѕРґР° next()
-        #// СЌС‚РѕС‚ РјРµС‚РѕРґ РјРѕР¶РЅРѕ РІС‹Р·С‹РІР°С‚СЊ РґРѕ СЃР°РјРѕРіРѕ РїРµСЂРІРѕРіРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ next()
+        #// возвращает значение, которое было в resultSet до выполнения метода next()
+        #// этот метод можно вызывать до самого первого выполнения next()
         #public anytype valuePrev_idx(int columnIdx, Types preferType = types::AnyType)
         #{
         #    if( (1 <= columnIdx) && valuesPrev)
@@ -356,19 +345,19 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #values
-        #// С‡РёС‚Р°РµРј РІСЃРµ РґР°РЅРЅС‹Рµ РёР· resultSet РІ РјР°СЃСЃРёРІ
+        #// читаем все данные из resultSet в массив
         #//
-        #// Сѓ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ РєР»Р°СЃСЃР° ResultSet РµСЃС‚СЊ РѕСЃРѕР±РµРЅРЅРѕСЃС‚Рё:
-        #// 1. РєР°Р¶РґРѕРµ РїРѕР»Рµ РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·. РїСЂРё РїРѕРїС‹С‚РєРµ РїРѕРІС‚РѕСЂРЅРѕРіРѕ С‡С‚РµРЅРёСЏ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°
-        #// 2. РїРѕР»СЏ РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РІ РїРѕСЂСЏРґРєРµ РІРѕР·СЂР°СЃС‚Р°РЅРёСЏ РЅРѕРјРµСЂРѕРІ. РµСЃР»Рё СЃРЅР°С‡Р°Р»Р° СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 2, Р° Р·Р°С‚РµРј РїРѕРїС‹С‚Р°С‚СЊСЃСЏ
-        #//    СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 1, С‚Рѕ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°.
+        #// у стандартного класса ResultSet есть особенности:
+        #// 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+        #//    считать поле с номером 1, то возникает ошибка.
         #//
-        #// РґР°РЅРЅС‹Р№ РјРµС‚РѕРґ РіР°СЂР°РЅС‚РёСЂСѓРµС‚, С‡С‚Рѕ С‡С‚РµРЅРёРµ Р±СѓРґРµС‚ РІС‹РїРѕР»РЅРµРЅРѕ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕ Рё РѕРґРёРЅ СЂР°Р·
+        #// данный метод гарантирует, что чтение будет выполнено последовательно и один раз
         #//
-        #// СЃРѕРѕР±СЂР°Р¶РµРЅРёРµ РїРѕ РїРѕРІРѕРґСѓ "С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РїРѕ РјРµСЂРµ РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё"
-        #// Р·РЅР°С‡РµРЅРёРµ РјРѕР¶РµС‚ РїРѕРЅР°РґРѕР±РёС‚СЊСЃСЏ Рё РїРѕСЃР»Рµ next() РјРµС‚РѕРґСѓ getPrev().
-        #// РџРѕСЌС‚РѕРјСѓ РІСЃРµ СЂР°РІРЅРѕ РїСЂРёРґРµС‚СЃСЏ СЃС‡РёС‚С‹РІР°С‚СЊ РІСЃРµ Р·РЅР°С‡РµРЅРёСЏ РёР· resultSet РґРѕ С‚РѕРіРѕ, РєР°Рє Р·Р°РІРµСЂС€РёС‚СЊ next()
-        #// Р° РµСЃР»Рё РїСЂРёРґРµС‚СЃСЏ - С‚Рѕ С‡РµРіРѕ СЃРµР±Рµ Р¶РёР·РЅСЊ СѓСЃР»РѕР¶РЅСЏС‚СЊ? С‡РёС‚Р°РµРј СЃСЂР°Р·Сѓ РІСЃРµ РєРѕР»РѕРЅРєРё.
+        #// соображение по поводу "читать только по мере необходимости"
+        #// значение может понадобиться и после next() методу getPrev().
+        #// Поэтому все равно придется считывать все значения из resultSet до того, как завершить next()
+        #// а если придется - то чего себе жизнь усложнять? читаем сразу все колонки.
         #Struct values()
         #{
         #    int n;
@@ -377,17 +366,17 @@ Formatversion: 1
         #;
         #    if( !values )
         #    {
-        #        Debug::assert(this.metaData() != null);                 // РјРµС‚РѕРґ values РґРѕР»Р¶РµРЅ РІС‹Р·С‹РІР°С‚СЊСЃСЏ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ СѓРґР°С‡РЅРѕРіРѕ next
+        #        Debug::assert(this.metaData() != null);                 // метод values должен вызываться только после удачного next
         #
         #        values = new Struct();
         #        n = this.metaData().getColumnCount();
         #        for(i=1; i<=n; ++i)
         #        {
-        #            name = this.metaData().getColumnName(i);            // РІ РґР°Р»СЊРЅРµР№С€РµРј РёРјСЏ РЅСѓР¶РЅРѕ Р±СѓРґРµС‚ РїРѕР»СѓС‡Р°С‚СЊ РёР· values РёР»Рё РёР· metadata
+        #            name = this.metaData().getColumnName(i);            // в дальнейшем имя нужно будет получать из values или из metadata
         #            if( !name )
         #                name = strFmt("%1",i);
         #
-        #            // РІРЅРёРјР°РЅРёРµ! Р·Р°РїРѕРјРёРЅР°РµРј С‚РѕС‚ С‚РёРї, РєРѕС‚РѕСЂС‹Р№ Р±С‹Р» РІ recordSet. РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ РґР°С‚ Р±СѓРґРµС‚ РїРѕР·Р¶Рµ, РІ РѕРєРѕРЅС‡Р°С‚РµР»СЊРЅРѕРј get
+        #            // внимание! запоминаем тот тип, который был в recordSet. преобразование дат будет позже, в окончательном get
         #            values.add(name, SysResultSet::get(this.resultSet(), i, this.inLoop(), this.metaData().getColumnType(i), Types::AnyType));
         #        }
         #    }
@@ -401,7 +390,7 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #convert
-        #// values С…СЂР°РЅРёС‚ РґР°С‚С‹ РєР°Рє РІ SQL - СЃ С‚РёРїРѕРј dateTime. РЅСѓР¶РЅРѕ СЃРєРѕРЅРІРµСЂС‚РёСЂРѕРІР°С‚СЊ
+        #// values хранит даты как в SQL - с типом dateTime. нужно сконвертировать
         #public static anytype convert(AnyType value, Types preferType = types::AnyType)
         #{
         #    anytype ret;
@@ -420,11 +409,7 @@ Formatversion: 1
         #            ret = any2str(value);
         #            break;
         #        case Types::Integer:
-        #        case Types::Time:
         #            ret = any2int(value);
-        #            break;
-        #        case Types::Int64:
-        #            ret = any2int64(value);
         #            break;
         #        case Types::Real:
         #            ret = any2real(value);
@@ -436,19 +421,7 @@ Formatversion: 1
         #                ret = any2enum(value);
         #            break;
         #        case Types::Date:
-        #            if( typeOf(value) == Types::UtcDateTime )
-        #                ret = datetimeutil::date(value);
-        #            else
-        #                ret = any2date(value);
-        #            break;
-        #        case Types::UtcDateTime:
-        #            if( typeOf(value) == Types::Date )
-        #                ret = datetimeutil::date(value);
-        #            else
-        #                ret = DateTimeUtil::anyToDateTime(value);
-        #            break;
-        #        case Types::Guid:
-        #            ret = any2guid(value);
+        #            ret = any2date(value);
         #            break;
         #        case Types::Container:
         #            ret = [value];
@@ -468,47 +441,41 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #executeQuery_base
-        #server public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
+        #public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
         #{
-        #    SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
-        #
-        #    permission.assert();
         #    return connection.createStatement().executeQuery(sqlStatement);
         #}
       ENDSOURCE
       SOURCE #executeUpdate
-        #server public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
+        #public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
         #{
-        #    SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
-        #
-        #    permission.assert();
         #    return connection.createStatement().executeUpdate(sqlStatement);
         #}
       ENDSOURCE
       SOURCE #get
-        #// РјРµС‚РѕРґ РІС‹РїРѕР»РЅСЏРµС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ, РЅРµРѕР±С…РѕРґРёРјРѕРµ РґР»СЏ С‡С‚РµРЅРёСЏ РёР· resultSet
+        #// метод выполняет преобразование, необходимое для чтения из resultSet
         #//
-        #// Сѓ СЃС‚Р°РЅРґР°СЂС‚РЅРѕРіРѕ РєР»Р°СЃСЃР° ResultSet РµСЃС‚СЊ РѕСЃРѕР±РµРЅРЅРѕСЃС‚Рё:
-        #// 1. РєР°Р¶РґРѕРµ РїРѕР»Рµ РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·. РїСЂРё РїРѕРїС‹С‚РєРµ РїРѕРІС‚РѕСЂРЅРѕРіРѕ С‡С‚РµРЅРёСЏ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°
-        #// 2. РїРѕР»СЏ РјРѕР¶РЅРѕ С‡РёС‚Р°С‚СЊ С‚РѕР»СЊРєРѕ РІ РїРѕСЂСЏРґРєРµ РІРѕР·СЂР°СЃС‚Р°РЅРёСЏ РЅРѕРјРµСЂРѕРІ. РµСЃР»Рё СЃРЅР°С‡Р°Р»Р° СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 2, Р° Р·Р°С‚РµРј РїРѕРїС‹С‚Р°С‚СЊСЃСЏ
-        #//    СЃС‡РёС‚Р°С‚СЊ РїРѕР»Рµ СЃ РЅРѕРјРµСЂРѕРј 1, С‚Рѕ РІРѕР·РЅРёРєР°РµС‚ РѕС€РёР±РєР°.
-        #// Р§С‚РѕР±С‹ РЅРµ РїР°СЂРёС‚СЃСЏ СЃ СЌС‚РёРјРё РѕСЃРѕР±РµРЅРЅРѕСЃС‚СЏРјРё - РёСЃРїРѕР»СЊР·СѓР№С‚Рµ РєР»Р°СЃСЃ SysResultSet
+        #// у стандартного класса ResultSet есть особенности:
+        #// 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+        #//    считать поле с номером 1, то возникает ошибка.
+        #// Чтобы не парится с этими особенностями - используйте класс SysResultSet
         #//
-        #// preferType - С‚РёРї РїРѕР»СЏ, РєСѓРґР° Р±СѓРґРµС‚ РїРѕРјРµС‰РµРЅРѕ Р·РЅР°С‡РµРЅРёРµ. РЎСѓС‰РµСЃС‚РІРµРЅРЅР°СЏ СЂР°Р·РЅРёС†Р° РїСЂРѕСЏРІР»СЏРµС‚СЃСЏ РІ Date Рё UtcDateTime.
+        #// preferType - тип поля, куда будет помещено значение. Существенная разница проявляется в Date и UtcDateTime.
         #//
-        #// РјРµС‚РѕРґ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РІРѕР·РІСЂР°С‰Р°РµС‚ С‚РёРї UtcDateTime
-        #// РЅСѓР¶РЅРѕ РІС‹РїРѕР»РЅСЏС‚СЊ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅСѓСЋ РґРѕРІРѕРґРєСѓ С‚РёРїР° РґР»СЏ РґР°С‚
-        #// РІРѕ-РїРµСЂРІС‹С…, СЌС‚Рѕ Р±РµР·РѕРїР°СЃРЅРѕ Рё РЅРµ РїСЂРёРІРѕРґРёС‚ Рє РїРѕС‚РµСЂРµ РґР°РЅРЅС‹С….
-        #//            РџРѕСЃРєРѕР»СЊРєСѓ DateTime РІСЃРµРіРґР° РјРѕР¶РЅРѕ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ Рє Date.
-        #//            Рђ РІРѕС‚ РѕР±СЂР°С‚РЅРѕРµ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ СѓР¶Рµ РЅРµ РІРѕСЃСЃС‚Р°РЅРѕРІРёС‚ РїРѕС‚РµРЅС†РёР°Р»СЊРЅРѕ РїРѕС‚РµСЂСЏРЅРЅСѓСЋ РёРЅС„РѕСЂРјР°С†РёСЋ.
-        #// РІРѕ-РІС‚РѕСЂС‹С…, Рє Р±Р°Р·Рµ РІСЃРµ СЂР°РІРЅРѕ РЅР°РґРѕ РѕР±СЂР°С‰Р°С‚СЊСЃСЏ РїРѕ resultSet.getDateTime()
-        #// С‡С‚РѕР±С‹ РїРѕР»СѓС‡РёС‚СЊ РёРјРµРЅРЅРѕ date, СЃС‚РѕРёС‚ СѓРєР°Р·Р°С‚СЊ preferType = types::Date
+        #// метод по умолчанию возвращает тип UtcDateTime
+        #// нужно выполнять дополнительную доводку типа для дат
+        #// во-первых, это безопасно и не приводит к потере данных.
+        #//            Поскольку DateTime всегда можно преобразовать к Date.
+        #//            А вот обратное преобразование уже не восстановит потенциально потерянную информацию.
+        #// во-вторых, к базе все равно надо обращаться по resultSet.getDateTime()
+        #// чтобы получить именно date, стоит указать preferType = types::Date
         #//
-        #// РјРµС‚РѕРґ СЃРїРµС†РёР°Р»СЊРЅРѕ СЃРґРµР»Р°РЅ СЃС‚Р°С‚РёС‡РµСЃРєРёРј, С‡С‚РѕР±С‹ РµРіРѕ РјРѕР¶РЅРѕ Р±С‹Р»Рѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РІ СЃС‚Р°СЂРѕРј РєРѕРґРµ, РєРѕС‚РѕСЂС‹Р№ СЂР°Р±РѕС‚Р°РµС‚ СЃРѕ СЃС‚Р°РЅРґР°СЂС‚РЅС‹Рј ResultSet
-        #// С…РѕС‚СЊ СЌС‚Рѕ Рё РЅРµ РѕС‡РµРЅСЊ С…РѕСЂРѕС€Рѕ СЃ С‚РѕС‡РєРё Р·СЂРµРЅРёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
+        #// метод специально сделан статическим, чтобы его можно было использовать в старом коде, который работает со стандартным ResultSet
+        #// хоть это и не очень хорошо с точки зрения производительности
         #public static AnyType get( ResultSet  resultSet,
         #                           int        columnIdx   = 1,
-        #                           boolean    insideLoop  = true, // РїС‹С‚Р°РµРјСЃСЏ С‡РёС‚Р°С‚СЊ Р·РЅР°С‡РµРЅРёРµ, РєРѕРіРґР° РІРЅСѓС‚СЂРё С†РёРєР»Р° (next() РІРµСЂРЅСѓР» true). РР»Рё РІРѕР·РІСЂР°С‰Р°РµРј nullValue() РµСЃР»Рё РЅР°С…РѕРґРёРјСЃСЏ Р·Р° С†РёРєР»РѕРј.
+        #                           boolean    insideLoop  = true, // пытаемся читать значение, когда внутри цикла (next() вернул true). Или возвращаем nullValue() если находимся за циклом.
         #                           int        columnType  = resultSet.getMetaData().getColumnType(ColumnIdx),
         #                           types      preferType  = types::AnyType)
         #{
@@ -544,25 +511,15 @@ Formatversion: 1
         #            break;
         #        case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
         #            if( insideLoop )
-        #                ret = SysResultSet::convert(resultSet.getDateTime(columnIdx), preferType);
+        #                ret = SysResultSet::convert(resultSet.getDate(columnIdx), preferType);
         #            else
-        #                ret = SysResultSet::getNull(Types::UtcDateTime, preferType);
+        #                ret = SysResultSet::getNull(Types::DateTime, preferType);
         #            break;
         #        case 45: // uniqueidentifier = AX GUID
-        #            if( insideLoop )
-        #                ret = SysResultSet::convert(resultSet.getGuid(columnIdx), preferType);
-        #            else
-        #                ret = SysResultSet::getNull(Types::Guid, preferType);
-        #            break;
         #        case 49: // bigint = AX int64
-        #            if( insideLoop )
-        #                ret = SysResultSet::convert(resultSet.getInt64(columnIdx), preferType);
-        #            else
-        #                ret = SysResultSet::getNull(Types::Int64, preferType);
-        #            break;
-        #        case  7: // varbinary = AX container. resultSet РЅРµ СѓРјРµРµС‚!
+        #        case  7: // varbinary = AX container. resultSet не умеет!
         #        default:
-        #            throw error(error::wrongUseOfFunction(funcname())); // РЅРµ СЃРјРѕРіР»Рё РїРѕРЅСЏС‚СЊ С‡С‚Рѕ Р·Р° С‚РёРї
+        #            throw error(error::wrongUseOfFunction(funcname())); // не смогли понять что за тип
         #    }
         #    return ret;
         #}
@@ -600,13 +557,9 @@ Formatversion: 1
         #}
       ENDSOURCE
       SOURCE #getNull
-        #// РІРѕР·РІСЂР°С‰Р°РµС‚ Р°РєСЃР°РїС‚РѕРІСЃРєРѕРµ null-Р·РЅР°С‡РµРЅРёРµ РґР»СЏ СѓРєР°Р·Р°РЅРЅРѕР№ РєРѕР»РѕРЅРєРё
+        #// возвращает аксаптовское null-значение для указанной колонки
         #public static anytype getNull(types t, Types preferType = types::AnyType)
         #{
-        #    if( preferType == Types::Date && t == types::UtcDateTime )
-        #    {
-        #        return DateNull();
-        #    }
         #    return nullValueBaseType(t, true);
         #}
       ENDSOURCE

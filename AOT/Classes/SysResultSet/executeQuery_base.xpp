@@ -1,7 +1,4 @@
-server public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
+﻿public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
 {
-    SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
-
-    permission.assert();
     return connection.createStatement().executeQuery(sqlStatement);
 }
