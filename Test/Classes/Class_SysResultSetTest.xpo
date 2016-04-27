@@ -18,11 +18,42 @@ Formatversion: 1
     
     METHODS
       SOURCE #classDeclaration
-        #// mazzy, v1.02-ax6, 24.04.2016
+        #// mazzy, v1.03-ax6, 27.04.2016
         #class SysResultSetTest extends SysTestCase
         #{
         #}
         #
+      ENDSOURCE
+      SOURCE #testAxTablesTmp
+        #void testAxTablesTmp()
+        #{
+        #    SqlSystem       sql = new SqlSystem();
+        #
+        #    CustTrans       trans;
+        #    TmpAccountSum   accountSum;
+        #
+        #    SysResultSet    resultSet;
+        #;
+        #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+        #
+        #    resultSet = SysResultSet::executeQuery(strfmt(@"
+        #        select top 10
+        #            t.AccountNum, sum(t.AmountMST) as Balance02
+        #        from CUSTTRANS as t
+        #        where t.PARTITION = %1 and t.DATAAREAID = %2
+        #        group by AccountNum
+        #        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+        #
+        #    this.assertNotNull(resultSet, "resultSet не создан");
+        #
+        #    while( resultSet.next() )
+        #    {
+        #        resultSet.copyTo(accountSum);
+        #
+        #        this.assertEquals(resultSet.value("AccountNum"), accountSum.AccountNum, "copyTo не скопировал accountNum");
+        #        this.assertEquals(resultSet.value("Balance02"), accountSum.Balance02, "copyTo не скопировал Balance02");
+        #    }
+        #}
       ENDSOURCE
       SOURCE #testAxTables
         #void testAxTables()
@@ -57,8 +88,8 @@ Formatversion: 1
         #        from CUSTTRANS as t
         #        join CUSTTRANSOPEN as o
         #            on (t.DATAAREAID = o.DATAAREAID and t.RECID = o.REFRECID)
-        #        where t.DATAAREAID = %1
-        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #        where t.PARTITION = %1 and t.DATAAREAID = %2
+        #        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
         #
         #    this.assertNotNull(resultSet, "resultSet не создан");
         #
@@ -129,14 +160,14 @@ Formatversion: 1
         #    // количество записей, посчитанное разными способами, должно совпадать со значением первой колонки
         #    this.assertEquals(
         #        recCount,
-        #        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)))
+        #        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)))
         #    );
         #
         #    // имя колонки указано
         #    // количество записей, посчитанное разными способами, должно совпадать
         #    this.assertEquals(
         #        recCount,
-        #        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)), 'cnt')
+        #        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)), 'cnt')
         #    );
         #}
       ENDSOURCE
@@ -177,9 +208,9 @@ Formatversion: 1
         #
         #    resultSet = SysResultSet::executeQuery(strfmt(@"
         #        select top 10 accountNum, transDate, sum(amountMST) as amountMST, count(*) from CUSTTRANS
-        #        where DATAAREAID = %1
+        #        where PARTITION = %1 and DATAAREAID = %2
         #        group by accountNum, transDate
-        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
         #
         #    this.assertNotNull(resultSet, "resultSet не создан");
         #    this.assertNotNull(resultSet.resultSet(), "resultSet() не создан");

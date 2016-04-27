@@ -1,16 +1,16 @@
-// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
+// РїСЂРёРјРµСЂ СЂР°Р±РѕС‚С‹ SysResultSet СЃ СѓРЅР°СЃР»РµРґРѕРІР°РЅРЅС‹Рј РєРѕРґРѕРј, РєРѕС‚РѕСЂС‹Р№ СѓР¶Рµ СЂР°Р±РѕС‚Р°РµС‚ СЃ ResultSet
 // mazzy, v1.02-ax6, 24.04.2016
 //
 // Disclimer:
-// Конечно надо было бы показать обращение к внешней базе - Oracle, MS SQL, Access, DBF и прочее
-// Но resultSet со всеми базами работает одинаково. Отличаются только connection.
-// Чтобы не усложнять пример установокой базы и не поставлять отдельный файл с базой
-// чтение выполняется из аксаптовских таблиц.
+// РљРѕРЅРµС‡РЅРѕ РЅР°РґРѕ Р±С‹Р»Рѕ Р±С‹ РїРѕРєР°Р·Р°С‚СЊ РѕР±СЂР°С‰РµРЅРёРµ Рє РІРЅРµС€РЅРµР№ Р±Р°Р·Рµ - Oracle, MS SQL, Access, DBF Рё РїСЂРѕС‡РµРµ
+// РќРѕ resultSet СЃРѕ РІСЃРµРјРё Р±Р°Р·Р°РјРё СЂР°Р±РѕС‚Р°РµС‚ РѕРґРёРЅР°РєРѕРІРѕ. РћС‚Р»РёС‡Р°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ connection.
+// Р§С‚РѕР±С‹ РЅРµ СѓСЃР»РѕР¶РЅСЏС‚СЊ РїСЂРёРјРµСЂ СѓСЃС‚Р°РЅРѕРІРѕРєРѕР№ Р±Р°Р·С‹ Рё РЅРµ РїРѕСЃС‚Р°РІР»СЏС‚СЊ РѕС‚РґРµР»СЊРЅС‹Р№ С„Р°Р№Р» СЃ Р±Р°Р·РѕР№
+// С‡С‚РµРЅРёРµ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РёР· Р°РєСЃР°РїС‚РѕРІСЃРєРёС… С‚Р°Р±Р»РёС†.
 //
 static void tutorial_SysResultSet_Legacy(Args _args)
 {
     #AVIfiles
-    Connection                      conn        = new Connection(); // в реальном коде здесь должно быть ODBCconnection, OCIconnection со своими connectionString...
+    Connection                      conn        = new Connection(); // РІ СЂРµР°Р»СЊРЅРѕРј РєРѕРґРµ Р·РґРµСЃСЊ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ ODBCconnection, OCIconnection СЃРѕ СЃРІРѕРёРјРё connectionString...
     ResultSet                       resultSet;
 
     str                             sqlStr      = @"select top 10 * from VENDTRANS as t";
@@ -26,19 +26,19 @@ static void tutorial_SysResultSet_Legacy(Args _args)
     //legacy: permission.assert();
     //legacy: sqlStatement = conn.createStatement();
     //legacy: resultSet = sqlStatement.executeQuery(sqlStr);
-    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // можно значительно упростить код и состав переменных
+    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // РјРѕР¶РЅРѕ Р·РЅР°С‡РёС‚РµР»СЊРЅРѕ СѓРїСЂРѕСЃС‚РёС‚СЊ РєРѕРґ Рё СЃРѕСЃС‚Р°РІ РїРµСЂРµРјРµРЅРЅС‹С…
 
     while( resultSet.next() )
     {
-        // legacyCode - обратите внимание, что колонки читаются в возрастающем порядке и каждая колонка читается только один раз
+        // legacyCode - РѕР±СЂР°С‚РёС‚Рµ РІРЅРёРјР°РЅРёРµ, С‡С‚Рѕ РєРѕР»РѕРЅРєРё С‡РёС‚Р°СЋС‚СЃСЏ РІ РІРѕР·СЂР°СЃС‚Р°СЋС‰РµРј РїРѕСЂСЏРґРєРµ Рё РєР°Р¶РґР°СЏ РєРѕР»РѕРЅРєР° С‡РёС‚Р°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·
         // ... = resultSet.getString(1)
         // ... = resultSet.getInt(2)
         // ... = resultSet.getReal(3)
         //
-        // вы хотите добавить обработку своих только что добавленных полей
+        // РІС‹ С…РѕС‚РёС‚Рµ РґРѕР±Р°РІРёС‚СЊ РѕР±СЂР°Р±РѕС‚РєСѓ СЃРІРѕРёС… С‚РѕР»СЊРєРѕ С‡С‚Рѕ РґРѕР±Р°РІР»РµРЅРЅС‹С… РїРѕР»РµР№
         info(strFmt("%1", SysResultSet::get(resultSet, 4)));
         info(strFmt("%1", SysResultSet::get(resultSet, 5)));
-        // чтобы получать значения по именам, все таки придется изменить тип переменной resultSet на SysResultSet.
+        // С‡С‚РѕР±С‹ РїРѕР»СѓС‡Р°С‚СЊ Р·РЅР°С‡РµРЅРёСЏ РїРѕ РёРјРµРЅР°Рј, РІСЃРµ С‚Р°РєРё РїСЂРёРґРµС‚СЃСЏ РёР·РјРµРЅРёС‚СЊ С‚РёРї РїРµСЂРµРјРµРЅРЅРѕР№ resultSet РЅР° SysResultSet.
 
         progress.incCount();
     }

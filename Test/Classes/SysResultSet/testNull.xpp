@@ -10,7 +10,7 @@ void testNull()
 
     SysResultSet    resultSet;
 
-    this.assertEquals(DatabaseId::MS_Sql_Server, SqlSystem::databaseBackendId()); // протестировано только на MS SQL
+    this.assertEquals(DatabaseId::MS_Sql_Server, SqlSystem::databaseBackendId()); // РїСЂРѕС‚РµСЃС‚РёСЂРѕРІР°РЅРѕ С‚РѕР»СЊРєРѕ РЅР° MS SQL
 
     resultSet = SysResultSet::executeQuery(@"
     select
@@ -30,18 +30,18 @@ void testNull()
            cast(null as varchar) as varchar
     ");
 
-    this.assertNotNull(resultSet, "resultSet не создан");
+    this.assertNotNull(resultSet, "resultSet РЅРµ СЃРѕР·РґР°РЅ");
 
-    this.assertTrue(resultSet.next(), "SQL-запрос возвратил пустой resultSet");
+    this.assertTrue(resultSet.next(), "SQL-Р·Р°РїСЂРѕСЃ РІРѕР·РІСЂР°С‚РёР» РїСѓСЃС‚РѕР№ resultSet");
 
-    this.assertFalse(resultSet.resultSet().wasNull(1), "wasNull до чтения поля 1"); // метод wasNull дает информацию только после попытки чтения
-    this.assertFalse(resultSet.resultSet().wasNull(2), "wasNull до чтения поля 2"); // метод wasNull дает информацию только после попытки чтения
+    this.assertFalse(resultSet.resultSet().wasNull(1), "wasNull РґРѕ С‡С‚РµРЅРёСЏ РїРѕР»СЏ 1"); // РјРµС‚РѕРґ wasNull РґР°РµС‚ РёРЅС„РѕСЂРјР°С†РёСЋ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РїРѕРїС‹С‚РєРё С‡С‚РµРЅРёСЏ
+    this.assertFalse(resultSet.resultSet().wasNull(2), "wasNull РґРѕ С‡С‚РµРЅРёСЏ РїРѕР»СЏ 2"); // РјРµС‚РѕРґ wasNull РґР°РµС‚ РёРЅС„РѕСЂРјР°С†РёСЋ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РїРѕРїС‹С‚РєРё С‡С‚РµРЅРёСЏ
 
     n = resultSet.values().fields();
     for(i=1; i<=n; ++i)
     {
         columnName = resultSet.values().fieldName(i);
-        this.assertTrue(resultSet.resultSet().wasNull(i), strFmt("wasNull после чтения поля %1:%2",i, columnName));
+        this.assertTrue(resultSet.resultSet().wasNull(i), strFmt("wasNull РїРѕСЃР»Рµ С‡С‚РµРЅРёСЏ РїРѕР»СЏ %1:%2",i, columnName));
         this.assertEquals(resultSet.valueNull(columnName), resultSet.value(columnName), columnName);
         this.assertEquals(resultSet.valueNull_idx(i),      resultSet.value_idx(i),      columnName);
     }

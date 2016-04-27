@@ -3,12 +3,12 @@ void testEmptyColumns()
     SysResultSet    resultSet = SysResultSet::executeQuery(@"select '' as str, 1 as num where 1 = 2");
 ;
     this.assertFalse(resultSet.next());
-    this.assertEquals(0, resultSet.values().fields()); // после неудачного next стандартный класс возвращает 0!
-    this.assertEquals(0, resultSet.metaData().getColumnCount()); // после неудачного next стандартный класс возвращает 0!
-    this.assertEquals("",resultSet.metaData().getColumnName(1)); // если выборка пустая, то нет имен колонок.
-    this.assertEquals("",resultSet.metaData().getColumnName(2)); // если выборка пустая, то нет имен колонок.
-    this.assertEquals("",resultSet.metaData().getColumnName(3)); // если выборка пустая, то нет имен колонок. даже если колонок нет
-    this.assertEquals(1,resultSet.metaData().getColumnType(1)); // а вот тип есть! но он всегда равен 1. очень странно!
-    this.assertEquals(1,resultSet.metaData().getColumnType(2)); // а вот тип есть! но он всегда равен 1. очень странно!
-    //resultSet.metaData().getColumnType(3); // а здесь будет исключение. очень странно!
+    this.assertEquals(0, resultSet.values().fields()); // РїРѕСЃР»Рµ РЅРµСѓРґР°С‡РЅРѕРіРѕ next СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РєР»Р°СЃСЃ РІРѕР·РІСЂР°С‰Р°РµС‚ 0!
+    this.assertEquals(0, resultSet.metaData().getColumnCount()); // РїРѕСЃР»Рµ РЅРµСѓРґР°С‡РЅРѕРіРѕ next СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РєР»Р°СЃСЃ РІРѕР·РІСЂР°С‰Р°РµС‚ 0!
+    this.assertEquals("",resultSet.metaData().getColumnName(1)); // РµСЃР»Рё РІС‹Р±РѕСЂРєР° РїСѓСЃС‚Р°СЏ, С‚Рѕ РЅРµС‚ РёРјРµРЅ РєРѕР»РѕРЅРѕРє.
+    this.assertEquals("",resultSet.metaData().getColumnName(2)); // РµСЃР»Рё РІС‹Р±РѕСЂРєР° РїСѓСЃС‚Р°СЏ, С‚Рѕ РЅРµС‚ РёРјРµРЅ РєРѕР»РѕРЅРѕРє.
+    this.assertEquals("",resultSet.metaData().getColumnName(3)); // РµСЃР»Рё РІС‹Р±РѕСЂРєР° РїСѓСЃС‚Р°СЏ, С‚Рѕ РЅРµС‚ РёРјРµРЅ РєРѕР»РѕРЅРѕРє. РґР°Р¶Рµ РµСЃР»Рё РєРѕР»РѕРЅРѕРє РЅРµС‚
+    this.assertEquals(1,resultSet.metaData().getColumnType(1)); // Р° РІРѕС‚ С‚РёРї РµСЃС‚СЊ! РЅРѕ РѕРЅ РІСЃРµРіРґР° СЂР°РІРµРЅ 1. РѕС‡РµРЅСЊ СЃС‚СЂР°РЅРЅРѕ!
+    this.assertEquals(1,resultSet.metaData().getColumnType(2)); // Р° РІРѕС‚ С‚РёРї РµСЃС‚СЊ! РЅРѕ РѕРЅ РІСЃРµРіРґР° СЂР°РІРµРЅ 1. РѕС‡РµРЅСЊ СЃС‚СЂР°РЅРЅРѕ!
+    //resultSet.metaData().getColumnType(3); // Р° Р·РґРµСЃСЊ Р±СѓРґРµС‚ РёСЃРєР»СЋС‡РµРЅРёРµ. РѕС‡РµРЅСЊ СЃС‚СЂР°РЅРЅРѕ!
 }

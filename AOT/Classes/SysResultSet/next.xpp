@@ -1,14 +1,14 @@
 public boolean next()
 {
-    insideLoop = resultSet.next();  // выбираем следующую запись
+    insideLoop = resultSet.next();  // РІС‹Р±РёСЂР°РµРј СЃР»РµРґСѓСЋС‰СѓСЋ Р·Р°РїРёСЃСЊ
 
-    if( !metaData )                 // выполняем только один раз
+    if( !metaData )                 // РІС‹РїРѕР»РЅСЏРµРј С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·
     {
         metaData = resultSet.getMetaData();
     }
 
-    valuesPrev  = values;           // сохраняем старое значение
-    values      = null;             // новые значения еще не прочитаны
+    valuesPrev  = values;           // СЃРѕС…СЂР°РЅСЏРµРј СЃС‚Р°СЂРѕРµ Р·РЅР°С‡РµРЅРёРµ
+    values      = null;             // РЅРѕРІС‹Рµ Р·РЅР°С‡РµРЅРёСЏ РµС‰Рµ РЅРµ РїСЂРѕС‡РёС‚Р°РЅС‹
 
     return insideLoop;
 }

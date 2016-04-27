@@ -18,13 +18,13 @@ Formatversion: 1
     METHODS
       SOURCE #binds
         #// возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
-        #// для каждого ключа [tableId, formatColumnName] хранится отдельный map
+        #// для каждого ключа [tableId, formatColumnName, dbBackend] хранится отдельный map
         #//
         #// если для данного ключа map еще не создавался, то создаст map,
         #// содержащий все возможные пары, для которых названия и типы совпадают
-        #Map binds(Common rec, str formatColumnName = "")
+        #Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
-        #    container       key     = [rec.TableId, formatColumnName];
+        #    container       key     = [rec.TableId, formatColumnName, dbBackend];
         #    Map             binds;
         #    str             columnName;
         #    SysDictTable    dt;
@@ -42,10 +42,14 @@ Formatversion: 1
         #    // создаем привязки полей к колонкам resultSet
         #    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
         #    dt = SysDictTable::newTableId(rec.tableId);
+        #    if( dt.isTmp() && !dt.isTempDb() )
+        #    {
+        #        dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
+        #    }
         #    for(i=1; i<=dt.columnCnt(); ++i )
         #    {
         #        df = new SysDictField(dt.id(), dt.column2id(i));
-        #        columnName = this.nameByField(df, formatColumnName);
+        #        columnName = this.nameByField(df, formatColumnName, dbBackend);
         #        if( this.copyAllowed(columnName, df) )
         #            binds.insert(columnName, df);                    // добавляем только те поля, которые имеют привязку к resultSet
         #    }
@@ -76,7 +80,7 @@ Formatversion: 1
         #// это разрешение выдается только на сервере.
         #// Следите за тем, чтобы объекты этого класса создавались на сервере, чтобы не генерировать лишнего трафика между клиентом и сервером.
         #//
-        #// mazzy, v1.02-ax6, 24.04.2016
+        #// mazzy, v1.03-ax6, 27.04.2016
         #class SysResultSet
         #{
         #    #define.NA(0)
@@ -161,9 +165,9 @@ Formatversion: 1
         #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
         #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
         #// Например, "myTable_%1"
-        #int copyTo(Common rec, str formatColumnName = "")
+        #int copyTo(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
-        #    Map             binds   = this.binds(rec, formatColumnName);
+        #    Map             binds   = this.binds(rec, formatColumnName, dbBackend);
         #    MapEnumerator   me      = binds.getEnumerator();
         #    int             cnt;
         #
@@ -236,9 +240,9 @@ Formatversion: 1
         #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
         #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
         #// Например, "myTable_%1"
-        #str nameByField(SysDictField df, str formatColumnName = "")
+        #str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
-        #    str columnName = df.name(DbBackend::Sql, df.arrayIndex());
+        #    str columnName = df.name(dbBackend, df.arrayIndex());
         #    if( formatColumnName )
         #    {
         #        columnName = strfmt(formatColumnName, columnName);
@@ -626,11 +630,42 @@ Formatversion: 1
     
     METHODS
       SOURCE #classDeclaration
-        #// mazzy, v1.02-ax6, 24.04.2016
+        #// mazzy, v1.03-ax6, 27.04.2016
         #class SysResultSetTest extends SysTestCase
         #{
         #}
         #
+      ENDSOURCE
+      SOURCE #testAxTablesTmp
+        #void testAxTablesTmp()
+        #{
+        #    SqlSystem       sql = new SqlSystem();
+        #
+        #    CustTrans       trans;
+        #    TmpAccountSum   accountSum;
+        #
+        #    SysResultSet    resultSet;
+        #;
+        #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+        #
+        #    resultSet = SysResultSet::executeQuery(strfmt(@"
+        #        select top 10
+        #            t.AccountNum, sum(t.AmountMST) as Balance02
+        #        from CUSTTRANS as t
+        #        where t.PARTITION = %1 and t.DATAAREAID = %2
+        #        group by AccountNum
+        #        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
+        #
+        #    this.assertNotNull(resultSet, "resultSet не создан");
+        #
+        #    while( resultSet.next() )
+        #    {
+        #        resultSet.copyTo(accountSum);
+        #
+        #        this.assertEquals(resultSet.value("AccountNum"), accountSum.AccountNum, "copyTo не скопировал accountNum");
+        #        this.assertEquals(resultSet.value("Balance02"), accountSum.Balance02, "copyTo не скопировал Balance02");
+        #    }
+        #}
       ENDSOURCE
       SOURCE #testAxTables
         #void testAxTables()
@@ -665,8 +700,8 @@ Formatversion: 1
         #        from CUSTTRANS as t
         #        join CUSTTRANSOPEN as o
         #            on (t.DATAAREAID = o.DATAAREAID and t.RECID = o.REFRECID)
-        #        where t.DATAAREAID = %1
-        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #        where t.PARTITION = %1 and t.DATAAREAID = %2
+        #        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
         #
         #    this.assertNotNull(resultSet, "resultSet не создан");
         #
@@ -737,14 +772,14 @@ Formatversion: 1
         #    // количество записей, посчитанное разными способами, должно совпадать со значением первой колонки
         #    this.assertEquals(
         #        recCount,
-        #        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)))
+        #        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)))
         #    );
         #
         #    // имя колонки указано
         #    // количество записей, посчитанное разными способами, должно совпадать
         #    this.assertEquals(
         #        recCount,
-        #        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)), 'cnt')
+        #        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)), 'cnt')
         #    );
         #}
       ENDSOURCE
@@ -785,9 +820,9 @@ Formatversion: 1
         #
         #    resultSet = SysResultSet::executeQuery(strfmt(@"
         #        select top 10 accountNum, transDate, sum(amountMST) as amountMST, count(*) from CUSTTRANS
-        #        where DATAAREAID = %1
+        #        where PARTITION = %1 and DATAAREAID = %2
         #        group by accountNum, transDate
-        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
         #
         #    this.assertNotNull(resultSet, "resultSet не создан");
         #    this.assertNotNull(resultSet.resultSet(), "resultSet() не создан");
@@ -949,7 +984,7 @@ Formatversion: 1
   
   SOURCE #tutorial_SysResultSet_AX
     #// пример работы SysResultSet с аксаптовскими таблицами
-    #// mazzy, v1.02-ax6, 24.04.2016
+    #// mazzy, v1.03-ax6, 27.04.2016
     #//
     #// Disclimer:
     #// ResultSet всегда медленнее читает аксаптовские, чем непосредственно select или query
@@ -965,6 +1000,10 @@ Formatversion: 1
     #// Однако есть типы задач, когда использование ResultSet для доступа к аксаптовским таблицам оправдано.
     #// Дело в том, что в аксаптовских select/query отсутствует having. А в прошлых версиях отсутствовал и union.
     #// Поэтому всевозможные сверки, поиск групп с заданными свойствами - другими словами, задачи, требующие having - вполне можно решать при помощи SysResultSet
+    #//
+    #// Еще один пласт задач - наложить несколько агрегатных функций на одно поле таблицы.
+    #// Так, в Аксапте нельзя в одном запросе одновременно получить sum(Amount) и avg(Amount) - надо делать несколько запросов
+    #// Типовой запрос с несколькими функциями - из одной суммы получить сумму по дебету и сумму по кредиту
     #//
     #// в данном примере рассматривается типовая задача сверки суммы в открытых проводках по поставщикам с суммой проводок
     #// для простоты сверка делается без валют, только по AmountMST

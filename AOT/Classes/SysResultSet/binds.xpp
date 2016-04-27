@@ -1,11 +1,11 @@
-// возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
-// для каждого ключа [tableId, formatColumnName] хранится отдельный map
+// РІРѕР·РІСЂР°С‰Р°РµС‚ map(columnName, SysDictField) - РїСЂРёРІСЏР·РєРё Рє РїРѕР»СЏРј РґР»СЏ РєРѕР»РѕРЅРѕРє resultSet
+// РґР»СЏ РєР°Р¶РґРѕРіРѕ РєР»СЋС‡Р° [tableId, formatColumnName, dbBackend] С…СЂР°РЅРёС‚СЃСЏ РѕС‚РґРµР»СЊРЅС‹Р№ map
 //
-// если для данного ключа map еще не создавался, то создаст map,
-// содержащий все возможные пары, для которых названия и типы совпадают
-Map binds(Common rec, str formatColumnName = "")
+// РµСЃР»Рё РґР»СЏ РґР°РЅРЅРѕРіРѕ РєР»СЋС‡Р° map РµС‰Рµ РЅРµ СЃРѕР·РґР°РІР°Р»СЃСЏ, С‚Рѕ СЃРѕР·РґР°СЃС‚ map,
+// СЃРѕРґРµСЂР¶Р°С‰РёР№ РІСЃРµ РІРѕР·РјРѕР¶РЅС‹Рµ РїР°СЂС‹, РґР»СЏ РєРѕС‚РѕСЂС‹С… РЅР°Р·РІР°РЅРёСЏ Рё С‚РёРїС‹ СЃРѕРІРїР°РґР°СЋС‚
+Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
 {
-    container       key     = [rec.TableId, formatColumnName];
+    container       key     = [rec.TableId, formatColumnName, dbBackend];
     Map             binds;
     str             columnName;
     SysDictTable    dt;
@@ -20,15 +20,19 @@ Map binds(Common rec, str formatColumnName = "")
 
     Debug::assert(this.metaData() != null);
 
-    // создаем привязки полей к колонкам resultSet
-    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
+    // СЃРѕР·РґР°РµРј РїСЂРёРІСЏР·РєРё РїРѕР»РµР№ Рє РєРѕР»РѕРЅРєР°Рј resultSet
+    binds  = new Map(Types::String, Types::Class);           // РїРѕР»СЏ СЃ РїСЂРёРІСЏР·РєРѕР№
     dt = SysDictTable::newTableId(rec.tableId);
+    if( dt.isTmp() && !dt.isTempDb() )
+    {
+        dbBackend = DbBackend::Native;                       // РґР»СЏ РІСЂРµРјРµРЅРЅРѕР№ С‚Р°Р±Р»РёС†С‹ РЅРµС‚ SQL-РёРјРµРЅ. РїРѕСЌС‚РѕРјСѓ РёСЃРїРѕР»СЊР·СѓРµРј РђРєСЃР°РїС‚РѕРІСЃРєРёРµ
+    }
     for(i=1; i<=dt.columnCnt(); ++i )
     {
         df = new SysDictField(dt.id(), dt.column2id(i));
-        columnName = this.nameByField(df, formatColumnName);
+        columnName = this.nameByField(df, formatColumnName, dbBackend);
         if( this.copyAllowed(columnName, df) )
-            binds.insert(columnName, df);                    // добавляем только те поля, которые имеют привязку к resultSet
+            binds.insert(columnName, df);                    // РґРѕР±Р°РІР»СЏРµРј С‚РѕР»СЊРєРѕ С‚Рµ РїРѕР»СЏ, РєРѕС‚РѕСЂС‹Рµ РёРјРµСЋС‚ РїСЂРёРІСЏР·РєСѓ Рє resultSet
     }
 
     bindsAll.insert(key, binds);

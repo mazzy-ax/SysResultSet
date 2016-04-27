@@ -22,9 +22,9 @@ Formatversion: 1
         #//
         #// если для данного ключа map еще не создавался, то создаст map,
         #// содержащий все возможные пары, для которых названия и типы совпадают
-        #Map binds(Common rec, str formatColumnName = "")
+        #Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
-        #    container       key     = [rec.TableId, formatColumnName];
+        #    container       key     = [rec.TableId, formatColumnName, dbBackend];
         #    Map             binds;
         #    str             columnName;
         #    SysDictTable    dt;
@@ -42,10 +42,14 @@ Formatversion: 1
         #    // создаем привязки полей к колонкам resultSet
         #    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
         #    dt = SysDictTable::newTableId(rec.tableId);
+        #    if( dt.isTmp() && !dt.isTempDb() )
+        #    {
+        #        dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
+        #    }
         #    for(i=1; i<=dt.columnCnt(); ++i )
         #    {
         #        df = new SysDictField(dt.id(), dt.column2id(i));
-        #        columnName = this.nameByField(df, formatColumnName);
+        #        columnName = this.nameByField(df, formatColumnName, dbBackend);
         #        if( this.copyAllowed(columnName, df) )
         #            binds.insert(columnName, df);                    // добавляем только те поля, которые имеют привязку к resultSet
         #    }
@@ -76,7 +80,7 @@ Formatversion: 1
         #// это разрешение выдается только на сервере.
         #// Следите за тем, чтобы объекты этого класса создавались на сервере, чтобы не генерировать лишнего трафика между клиентом и сервером.
         #//
-        #// mazzy, v1.02-ax6, 24.04.2016
+        #// mazzy, v1.03-ax6, 27.04.2016
         #class SysResultSet
         #{
         #    #define.NA(0)
@@ -161,9 +165,9 @@ Formatversion: 1
         #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
         #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
         #// Например, "myTable_%1"
-        #int copyTo(Common rec, str formatColumnName = "")
+        #int copyTo(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
-        #    Map             binds   = this.binds(rec, formatColumnName);
+        #    Map             binds   = this.binds(rec, formatColumnName, dbBackend);
         #    MapEnumerator   me      = binds.getEnumerator();
         #    int             cnt;
         #
@@ -236,9 +240,9 @@ Formatversion: 1
         #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
         #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
         #// Например, "myTable_%1"
-        #str nameByField(SysDictField df, str formatColumnName = "")
+        #str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
         #{
-        #    str columnName = df.name(DbBackend::Sql, df.arrayIndex());
+        #    str columnName = df.name(dbBackend, df.arrayIndex());
         #    if( formatColumnName )
         #    {
         #        columnName = strfmt(formatColumnName, columnName);

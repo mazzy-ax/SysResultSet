@@ -1,4 +1,4 @@
-// values хранит даты как в SQL - с типом dateTime. нужно сконвертировать
+// values С…СЂР°РЅРёС‚ РґР°С‚С‹ РєР°Рє РІ SQL - СЃ С‚РёРїРѕРј dateTime. РЅСѓР¶РЅРѕ СЃРєРѕРЅРІРµСЂС‚РёСЂРѕРІР°С‚СЊ
 public static anytype convert(AnyType value, Types preferType = types::AnyType)
 {
     anytype ret;
