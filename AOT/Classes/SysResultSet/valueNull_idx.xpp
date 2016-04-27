@@ -1,4 +1,4 @@
-// возвращает аксаптовское null-значение для указанной колонки
+// РІРѕР·РІСЂР°С‰Р°РµС‚ Р°РєСЃР°РїС‚РѕРІСЃРєРѕРµ null-Р·РЅР°С‡РµРЅРёРµ РґР»СЏ СѓРєР°Р·Р°РЅРЅРѕР№ РєРѕР»РѕРЅРєРё
 public anytype valueNull_idx(int columnIdx, Types preferType = types::AnyType)
 {
     if( (1 <= columnIdx) && (columnIdx <= this.values().fields()) )

@@ -18,7 +18,7 @@ void testAxTables()
     int             i;
     SysDictField    df;
 ;
-    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+    trans.clear(); // РїСЂРѕСЏРІР»СЏРµРј dataAreaId, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРµ С‚РµРєСѓС‰РµР№ РєРѕРјРїР°РЅРёРё. РґР°Р¶Рµ РµСЃР»Рё ct РЅР°С…РѕРґРёС‚СЃСЏ РІ РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РєРѕРјРїР°РЅРёРё
 
     resultSet = SysResultSet::executeQuery(strfmt(@"
         select top 10
@@ -30,32 +30,32 @@ void testAxTables()
         from CUSTTRANS as t
         join CUSTTRANSOPEN as o
             on (t.DATAAREAID = o.DATAAREAID and t.RECID = o.REFRECID)
-        where t.DATAAREAID = %1
-        ", sql.sqlLiteral(trans.dataAreaId)));
+        where t.PARTITION = %1 and t.DATAAREAID = %2
+        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
 
-    this.assertNotNull(resultSet, "resultSet не создан");
+    this.assertNotNull(resultSet, "resultSet РЅРµ СЃРѕР·РґР°РЅ");
 
     while( resultSet.next() )
     {
         ++lineCount;
 
         open_recId = resultSet.value("o_recId");
-        this.assertNotEqual(0, open_recId, strfmt("%1: не прочитан open.recid", lineCount));
+        this.assertNotEqual(0, open_recId, strfmt("%1: РЅРµ РїСЂРѕС‡РёС‚Р°РЅ open.recid", lineCount));
 
         open = CustTransOpen::find(open_recId);
-        this.assertEquals(open_recId, open.RecId, strfmt("%1: не найден open с recID %1", lineCount, open_recId));
+        this.assertEquals(open_recId, open.RecId, strfmt("%1: РЅРµ РЅР°Р№РґРµРЅ open СЃ recID %1", lineCount, open_recId));
 
-        this.assertEquals(3, resultSet.copyTo(open_res, "o_%1"), strfmt("%1: copyTo скопировал не все поля, указанные в запросе", lineCount));
-        this.assertEquals(open.AmountCur, open_res.AmountCur, strfmt("%1: не совпадают AmountCur в open и resultSet после copyTo", lineCount));
-        this.assertEquals(open.AmountMST, open_res.AmountMST, strfmt("%1: не совпадают AmountMST в open и resultSet после copyTo", lineCount));
-        this.assertEquals(open.DueDate, open_res.DueDate,     strfmt("%1: не совпадают DueDate в open и resultSet после copyTo", lineCount));
+        this.assertEquals(3, resultSet.copyTo(open_res, "o_%1"), strfmt("%1: copyTo СЃРєРѕРїРёСЂРѕРІР°Р» РЅРµ РІСЃРµ РїРѕР»СЏ, СѓРєР°Р·Р°РЅРЅС‹Рµ РІ Р·Р°РїСЂРѕСЃРµ", lineCount));
+        this.assertEquals(open.AmountCur, open_res.AmountCur, strfmt("%1: РЅРµ СЃРѕРІРїР°РґР°СЋС‚ AmountCur РІ open Рё resultSet РїРѕСЃР»Рµ copyTo", lineCount));
+        this.assertEquals(open.AmountMST, open_res.AmountMST, strfmt("%1: РЅРµ СЃРѕРІРїР°РґР°СЋС‚ AmountMST РІ open Рё resultSet РїРѕСЃР»Рµ copyTo", lineCount));
+        this.assertEquals(open.DueDate, open_res.DueDate,     strfmt("%1: РЅРµ СЃРѕРІРїР°РґР°СЋС‚ DueDate РІ open Рё resultSet РїРѕСЃР»Рµ copyTo", lineCount));
 
         //////////////////////////////
         trans_recId = resultSet.value("recId");
-        this.assertNotEqual(0, trans_recId, strfmt("%1: не прочитан trans.recid", lineCount));
+        this.assertNotEqual(0, trans_recId, strfmt("%1: РЅРµ РїСЂРѕС‡РёС‚Р°РЅ trans.recid", lineCount));
 
         trans = CustTrans::find(trans_recId);
-        this.assertEquals(trans_recId, trans.RecId, strfmt("%1: не найден trans с recID %2", lineCount, trans_recId));
+        this.assertEquals(trans_recId, trans.RecId, strfmt("%1: РЅРµ РЅР°Р№РґРµРЅ trans СЃ recID %2", lineCount, trans_recId));
 
         resultSet.copyTo(trans_res);
 
@@ -65,14 +65,14 @@ void testAxTables()
             if( df && df.saveContents() && df.isSql() && !df.isSystem() )
             {
                 if( df.name() == "MCRPAYMORDERID" )
-                    continue; //TODO почему resultSet возвращает " " вместо пустой строки?
+                    continue; //TODO РїРѕС‡РµРјСѓ resultSet РІРѕР·РІСЂР°С‰Р°РµС‚ " " РІРјРµСЃС‚Рѕ РїСѓСЃС‚РѕР№ СЃС‚СЂРѕРєРё?
 
-                this.assertEquals(trans.(df.extendedFieldId()), trans_res.(df.extendedFieldId()), strfmt("%1: не совпадают trans.%2 и resultSet после copyTo", lineCount, df.name()));
+                this.assertEquals(trans.(df.extendedFieldId()), trans_res.(df.extendedFieldId()), strfmt("%1: РЅРµ СЃРѕРІРїР°РґР°СЋС‚ trans.%2 Рё resultSet РїРѕСЃР»Рµ copyTo", lineCount, df.name()));
             }
         }
-        //this.assertTrue(trans.equal(trans_res), strfmt("%1: не совпадают данные в trans и resultSet после copyTo", lineCount));
+        //this.assertTrue(trans.equal(trans_res), strfmt("%1: РЅРµ СЃРѕРІРїР°РґР°СЋС‚ РґР°РЅРЅС‹Рµ РІ trans Рё resultSet РїРѕСЃР»Рµ copyTo", lineCount));
     }
 
-    this.assertNotEqual(0, lineCount, "SQL-запрос возвратил пустой resultSet. Возможно, в этой компании нет открытых проводок по клиентам. Для полноценного тестирования класса в компании должно быть по крайней мере 2 открытые проводки");
-    this.assertNotEqual(1, lineCount, "SQL-запрос возвратил одну строку. Для полноценного тестирования класса в компании должно быть по крайней мере 2 открытые проводки");
+    this.assertNotEqual(0, lineCount, "SQL-Р·Р°РїСЂРѕСЃ РІРѕР·РІСЂР°С‚РёР» РїСѓСЃС‚РѕР№ resultSet. Р’РѕР·РјРѕР¶РЅРѕ, РІ СЌС‚РѕР№ РєРѕРјРїР°РЅРёРё РЅРµС‚ РѕС‚РєСЂС‹С‚С‹С… РїСЂРѕРІРѕРґРѕРє РїРѕ РєР»РёРµРЅС‚Р°Рј. Р”Р»СЏ РїРѕР»РЅРѕС†РµРЅРЅРѕРіРѕ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ РєР»Р°СЃСЃР° РІ РєРѕРјРїР°РЅРёРё РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РїРѕ РєСЂР°Р№РЅРµР№ РјРµСЂРµ 2 РѕС‚РєСЂС‹С‚С‹Рµ РїСЂРѕРІРѕРґРєРё");
+    this.assertNotEqual(1, lineCount, "SQL-Р·Р°РїСЂРѕСЃ РІРѕР·РІСЂР°С‚РёР» РѕРґРЅСѓ СЃС‚СЂРѕРєСѓ. Р”Р»СЏ РїРѕР»РЅРѕС†РµРЅРЅРѕРіРѕ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ РєР»Р°СЃСЃР° РІ РєРѕРјРїР°РЅРёРё РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РїРѕ РєСЂР°Р№РЅРµР№ РјРµСЂРµ 2 РѕС‚РєСЂС‹С‚С‹Рµ РїСЂРѕРІРѕРґРєРё");
 }

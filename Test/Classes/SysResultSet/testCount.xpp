@@ -16,19 +16,19 @@ void testCount()
 ;
     recCount = getRecCount();
 
-    cust.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если cust находится в виртуальной компании
+    cust.clear(); // РїСЂРѕСЏРІР»СЏРµРј dataAreaId, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРµ С‚РµРєСѓС‰РµР№ РєРѕРјРїР°РЅРёРё. РґР°Р¶Рµ РµСЃР»Рё cust РЅР°С…РѕРґРёС‚СЃСЏ РІ РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РєРѕРјРїР°РЅРёРё
 
-    // имя колонки не указано
-    // количество записей, посчитанное разными способами, должно совпадать со значением первой колонки
+    // РёРјСЏ РєРѕР»РѕРЅРєРё РЅРµ СѓРєР°Р·Р°РЅРѕ
+    // РєРѕР»РёС‡РµСЃС‚РІРѕ Р·Р°РїРёСЃРµР№, РїРѕСЃС‡РёС‚Р°РЅРЅРѕРµ СЂР°Р·РЅС‹РјРё СЃРїРѕСЃРѕР±Р°РјРё, РґРѕР»Р¶РЅРѕ СЃРѕРІРїР°РґР°С‚СЊ СЃРѕ Р·РЅР°С‡РµРЅРёРµРј РїРµСЂРІРѕР№ РєРѕР»РѕРЅРєРё
     this.assertEquals(
         recCount,
-        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)))
+        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)))
     );
 
-    // имя колонки указано
-    // количество записей, посчитанное разными способами, должно совпадать
+    // РёРјСЏ РєРѕР»РѕРЅРєРё СѓРєР°Р·Р°РЅРѕ
+    // РєРѕР»РёС‡РµСЃС‚РІРѕ Р·Р°РїРёСЃРµР№, РїРѕСЃС‡РёС‚Р°РЅРЅРѕРµ СЂР°Р·РЅС‹РјРё СЃРїРѕСЃРѕР±Р°РјРё, РґРѕР»Р¶РЅРѕ СЃРѕРІРїР°РґР°С‚СЊ
     this.assertEquals(
         recCount,
-        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)), 'cnt')
+        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.PARTITION = %1 and t.DATAAREAID = %2", sql.sqlLiteral(cust.Partition), sql.sqlLiteral(cust.dataAreaId)), 'cnt')
     );
 }

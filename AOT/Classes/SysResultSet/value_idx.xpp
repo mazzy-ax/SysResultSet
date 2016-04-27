@@ -1,4 +1,4 @@
 public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
 {
-    return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // не проверяем номер колонки. пусть лучше ругнется когда программа обращается к несуществующей колонке
+    return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // РЅРµ РїСЂРѕРІРµСЂСЏРµРј РЅРѕРјРµСЂ РєРѕР»РѕРЅРєРё. РїСѓСЃС‚СЊ Р»СѓС‡С€Рµ СЂСѓРіРЅРµС‚СЃСЏ РєРѕРіРґР° РїСЂРѕРіСЂР°РјРјР° РѕР±СЂР°С‰Р°РµС‚СЃСЏ Рє РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ РєРѕР»РѕРЅРєРµ
 }

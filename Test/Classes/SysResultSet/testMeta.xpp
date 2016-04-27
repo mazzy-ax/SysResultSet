@@ -7,92 +7,92 @@ void testMeta()
 
     int                 lineCount;
 ;
-    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+    trans.clear(); // РїСЂРѕСЏРІР»СЏРµРј dataAreaId, СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРµ С‚РµРєСѓС‰РµР№ РєРѕРјРїР°РЅРёРё. РґР°Р¶Рµ РµСЃР»Рё ct РЅР°С…РѕРґРёС‚СЃСЏ РІ РІРёСЂС‚СѓР°Р»СЊРЅРѕР№ РєРѕРјРїР°РЅРёРё
 
     resultSet = SysResultSet::executeQuery(strfmt(@"
         select top 10 accountNum, transDate, sum(amountMST) as amountMST, count(*) from CUSTTRANS
-        where DATAAREAID = %1
+        where PARTITION = %1 and DATAAREAID = %2
         group by accountNum, transDate
-        ", sql.sqlLiteral(trans.dataAreaId)));
+        ", sql.sqlLiteral(trans.Partition), sql.sqlLiteral(trans.dataAreaId)));
 
-    this.assertNotNull(resultSet, "resultSet не создан");
-    this.assertNotNull(resultSet.resultSet(), "resultSet() не создан");
+    this.assertNotNull(resultSet, "resultSet РЅРµ СЃРѕР·РґР°РЅ");
+    this.assertNotNull(resultSet.resultSet(), "resultSet() РЅРµ СЃРѕР·РґР°РЅ");
 
-    this.assertNull(resultSet.metaData(), "metadata() до первого next");
+    this.assertNull(resultSet.metaData(), "metadata() РґРѕ РїРµСЂРІРѕРіРѕ next");
 
     meta = resultSet.resultSet().getMetaData();
-    this.assertNotNull(meta, "MetaData не создана");
-    this.assertEquals(0,  meta.getColumnCount(), "число колонок до первого next");
-    this.assertEquals("", meta.getColumnName(1), "имя колонки до первого next");
-    this.assertEquals(1,  meta.getColumnType(1), "тип колонки до первого next");
+    this.assertNotNull(meta, "MetaData РЅРµ СЃРѕР·РґР°РЅР°");
+    this.assertEquals(0,  meta.getColumnCount(), "С‡РёСЃР»Рѕ РєРѕР»РѕРЅРѕРє РґРѕ РїРµСЂРІРѕРіРѕ next");
+    this.assertEquals("", meta.getColumnName(1), "РёРјСЏ РєРѕР»РѕРЅРєРё РґРѕ РїРµСЂРІРѕРіРѕ next");
+    this.assertEquals(1,  meta.getColumnType(1), "С‚РёРї РєРѕР»РѕРЅРєРё РґРѕ РїРµСЂРІРѕРіРѕ next");
 
 
     while( resultSet.next() )
     {
         ++lineCount;
 
-        this.assertNotNull(resultSet.metaData(), strfmt("%1: metadata() после next", lineCount));
-        this.assertNotNull(resultSet.values(), strfmt("%1: values() после next", lineCount));
+        this.assertNotNull(resultSet.metaData(), strfmt("%1: metadata() РїРѕСЃР»Рµ next", lineCount));
+        this.assertNotNull(resultSet.values(), strfmt("%1: values() РїРѕСЃР»Рµ next", lineCount));
 
         meta = resultSet.resultSet().getMetaData();
-        this.assertNotNull(meta, strfmt("%1: MetaData после next", lineCount));
-        this.assertEquals(4,            meta.getColumnCount(), strfmt("%1: число колонок после next", lineCount));
-        this.assertEquals("accountNum", meta.getColumnName(1), strfmt("%1: имя колонки1 после next", lineCount));
-        this.assertEquals(0,            meta.getColumnType(1), strfmt("%1: тип колонки1 после next", lineCount));
-        this.assertEquals("transDate",  meta.getColumnName(2), strfmt("%1: имя колонки2 после next", lineCount));
-        this.assertEquals(3,            meta.getColumnType(2), strfmt("%1: тип колонки2 после next", lineCount));
-        this.assertEquals("amountMST",  meta.getColumnName(3), strfmt("%1: имя колонки3 после next", lineCount));
-        this.assertEquals(2,            meta.getColumnType(3), strfmt("%1: тип колонки3 после next", lineCount));
-        this.assertEquals("",           meta.getColumnName(4), strfmt("%1: имя колонки4 после next", lineCount));
-        this.assertEquals(1,            meta.getColumnType(4), strfmt("%1: тип колонки4 после next", lineCount));
+        this.assertNotNull(meta, strfmt("%1: MetaData РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(4,            meta.getColumnCount(), strfmt("%1: С‡РёСЃР»Рѕ РєРѕР»РѕРЅРѕРє РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("accountNum", meta.getColumnName(1), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё1 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(0,            meta.getColumnType(1), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё1 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("transDate",  meta.getColumnName(2), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё2 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(3,            meta.getColumnType(2), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё2 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("amountMST",  meta.getColumnName(3), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё3 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(2,            meta.getColumnType(3), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё3 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("",           meta.getColumnName(4), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё4 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(1,            meta.getColumnType(4), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё4 РїРѕСЃР»Рµ next", lineCount));
 
-        this.assertEquals(4,                    resultSet.values().fields(), strfmt("%1: число значений должно совпадать с числом колонок после next", lineCount));
-        this.assertEquals("accountNum",         resultSet.values().fieldName(1), strfmt("%1: имя значения1 после next", lineCount));
-        this.assertEquals(Types::String,        resultSet.values().fieldType(1), strfmt("%1: тип значения1 после next", lineCount));
-        this.assertEquals("transDate",          resultSet.values().fieldName(2), strfmt("%1: имя значения2 после next", lineCount));
-        this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), strfmt("%1: тип значения2 после next", lineCount));
-        this.assertEquals("amountMST",          resultSet.values().fieldName(3), strfmt("%1: имя значения3 после next", lineCount));
-        this.assertEquals(Types::Real,          resultSet.values().fieldType(3), strfmt("%1: тип значения3 после next", lineCount));
-        this.assertEquals("4",                  resultSet.values().fieldName(4), strfmt("%1: имя значения4 после next", lineCount));
-        this.assertEquals(Types::Integer,       resultSet.values().fieldType(4), strfmt("%1: тип значения4 после next", lineCount));
+        this.assertEquals(4,                    resultSet.values().fields(), strfmt("%1: С‡РёСЃР»Рѕ Р·РЅР°С‡РµРЅРёР№ РґРѕР»Р¶РЅРѕ СЃРѕРІРїР°РґР°С‚СЊ СЃ С‡РёСЃР»РѕРј РєРѕР»РѕРЅРѕРє РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("accountNum",         resultSet.values().fieldName(1), strfmt("%1: РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ1 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(Types::String,        resultSet.values().fieldType(1), strfmt("%1: С‚РёРї Р·РЅР°С‡РµРЅРёСЏ1 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("transDate",          resultSet.values().fieldName(2), strfmt("%1: РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ2 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), strfmt("%1: С‚РёРї Р·РЅР°С‡РµРЅРёСЏ2 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("amountMST",          resultSet.values().fieldName(3), strfmt("%1: РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ3 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(Types::Real,          resultSet.values().fieldType(3), strfmt("%1: С‚РёРї Р·РЅР°С‡РµРЅРёСЏ3 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals("4",                  resultSet.values().fieldName(4), strfmt("%1: РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ4 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(Types::Integer,       resultSet.values().fieldType(4), strfmt("%1: С‚РёРї Р·РЅР°С‡РµРЅРёСЏ4 РїРѕСЃР»Рµ next", lineCount));
 
-        this.assertEquals(1, resultSet.values().index("accountNum"),strfmt("%1: номер значения1 после next", lineCount));
-        this.assertEquals(2, resultSet.values().index("transDate"), strfmt("%1: номер значения2 после next", lineCount));
-        this.assertEquals(3, resultSet.values().index("amountMST"), strfmt("%1: номер значения3 после next", lineCount));
-        this.assertEquals(4, resultSet.values().index("4"),         strfmt("%1: номер значения4 после next", lineCount));
+        this.assertEquals(1, resultSet.values().index("accountNum"),strfmt("%1: РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ1 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(2, resultSet.values().index("transDate"), strfmt("%1: РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ2 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(3, resultSet.values().index("amountMST"), strfmt("%1: РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ3 РїРѕСЃР»Рµ next", lineCount));
+        this.assertEquals(4, resultSet.values().index("4"),         strfmt("%1: РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ4 РїРѕСЃР»Рµ next", lineCount));
     }
 
-    this.assertNotNull(resultSet.metaData(), strfmt("%1: metadata() после цикла", lineCount));
-    this.assertNotNull(resultSet.values(),   strfmt("%1: values() после цикла", lineCount));
+    this.assertNotNull(resultSet.metaData(), strfmt("%1: metadata() РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertNotNull(resultSet.values(),   strfmt("%1: values() РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
 
     meta = resultSet.resultSet().getMetaData();
-    this.assertNotNull(meta, strfmt("%1: MetaData не создана", lineCount));
-    this.assertEquals(4,            meta.getColumnCount(), strfmt("%1: число колонок после цикла", lineCount));
-    this.assertEquals("accountNum", meta.getColumnName(1), strfmt("%1: имя колонки1 после цикла", lineCount));
-    this.assertEquals(0,            meta.getColumnType(1), strfmt("%1: тип колонки1 после цикла", lineCount));
-    this.assertEquals("transDate",  meta.getColumnName(2), strfmt("%1: имя колонки2 после цикла", lineCount));
-    this.assertEquals(3,            meta.getColumnType(2), strfmt("%1: тип колонки2 после цикла", lineCount));
-    this.assertEquals("amountMST",  meta.getColumnName(3), strfmt("%1: имя колонки3 после цикла", lineCount));
-    this.assertEquals(2,            meta.getColumnType(3), strfmt("%1: тип колонки3 после цикла", lineCount));
-    this.assertEquals("",           meta.getColumnName(4), strfmt("%1: имя колонки4 после цикла", lineCount));
-    this.assertEquals(1,            meta.getColumnType(4), strfmt("%1: тип колонки4 после цикла", lineCount));
+    this.assertNotNull(meta, strfmt("%1: MetaData РЅРµ СЃРѕР·РґР°РЅР°", lineCount));
+    this.assertEquals(4,            meta.getColumnCount(), strfmt("%1: С‡РёСЃР»Рѕ РєРѕР»РѕРЅРѕРє РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals("accountNum", meta.getColumnName(1), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё1 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals(0,            meta.getColumnType(1), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё1 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals("transDate",  meta.getColumnName(2), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё2 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals(3,            meta.getColumnType(2), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё2 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals("amountMST",  meta.getColumnName(3), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё3 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals(2,            meta.getColumnType(3), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё3 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals("",           meta.getColumnName(4), strfmt("%1: РёРјСЏ РєРѕР»РѕРЅРєРё4 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
+    this.assertEquals(1,            meta.getColumnType(4), strfmt("%1: С‚РёРї РєРѕР»РѕРЅРєРё4 РїРѕСЃР»Рµ С†РёРєР»Р°", lineCount));
 
-    this.assertEquals(4,                    resultSet.values().fields(), "число значений должно совпадать с числом колонок после цикла");
-    this.assertEquals("accountNum",         resultSet.values().fieldName(1), "имя значения1 после цикла");
-    this.assertEquals(Types::String,        resultSet.values().fieldType(1), "тип значения1 после цикла");
-    this.assertEquals("transDate",          resultSet.values().fieldName(2), "имя значения2 после цикла");
-    this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), "тип значения2 после цикла");
-    this.assertEquals("amountMST",          resultSet.values().fieldName(3), "имя значения3 после цикла");
-    this.assertEquals(Types::Real,          resultSet.values().fieldType(3), "тип значения3 после цикла");
-    this.assertEquals("4",                  resultSet.values().fieldName(4), "имя значения4 после цикла");
-    this.assertEquals(Types::Integer,       resultSet.values().fieldType(4), "тип значения4 после цикла");
+    this.assertEquals(4,                    resultSet.values().fields(), "С‡РёСЃР»Рѕ Р·РЅР°С‡РµРЅРёР№ РґРѕР»Р¶РЅРѕ СЃРѕРІРїР°РґР°С‚СЊ СЃ С‡РёСЃР»РѕРј РєРѕР»РѕРЅРѕРє РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals("accountNum",         resultSet.values().fieldName(1), "РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ1 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(Types::String,        resultSet.values().fieldType(1), "С‚РёРї Р·РЅР°С‡РµРЅРёСЏ1 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals("transDate",          resultSet.values().fieldName(2), "РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ2 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), "С‚РёРї Р·РЅР°С‡РµРЅРёСЏ2 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals("amountMST",          resultSet.values().fieldName(3), "РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ3 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(Types::Real,          resultSet.values().fieldType(3), "С‚РёРї Р·РЅР°С‡РµРЅРёСЏ3 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals("4",                  resultSet.values().fieldName(4), "РёРјСЏ Р·РЅР°С‡РµРЅРёСЏ4 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(Types::Integer,       resultSet.values().fieldType(4), "С‚РёРї Р·РЅР°С‡РµРЅРёСЏ4 РїРѕСЃР»Рµ С†РёРєР»Р°");
 
-    this.assertEquals(1, resultSet.values().index("accountNum"),"номер значения1 после цикла");
-    this.assertEquals(2, resultSet.values().index("transDate"), "номер значения2 после цикла");
-    this.assertEquals(3, resultSet.values().index("amountMST"), "номер значения3 после цикла");
-    this.assertEquals(4, resultSet.values().index("4"),         "номер значения4 после цикла");
+    this.assertEquals(1, resultSet.values().index("accountNum"),"РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ1 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(2, resultSet.values().index("transDate"), "РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ2 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(3, resultSet.values().index("amountMST"), "РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ3 РїРѕСЃР»Рµ С†РёРєР»Р°");
+    this.assertEquals(4, resultSet.values().index("4"),         "РЅРѕРјРµСЂ Р·РЅР°С‡РµРЅРёСЏ4 РїРѕСЃР»Рµ С†РёРєР»Р°");
 
 
-    this.assertNotEqual(0, lineCount, "SQL-запрос возвратил пустой resultSet. Возможно, в этой компании нет открытых проводок по клиентам. Для полноценного тестирования класса в компании должно быть по крайней мере 2 проводки");
-    this.assertNotEqual(1, lineCount, "SQL-запрос возвратил одну строку. Для полноценного тестирования класса в компании должно быть по крайней мере 2 проводки");
+    this.assertNotEqual(0, lineCount, "SQL-Р·Р°РїСЂРѕСЃ РІРѕР·РІСЂР°С‚РёР» РїСѓСЃС‚РѕР№ resultSet. Р’РѕР·РјРѕР¶РЅРѕ, РІ СЌС‚РѕР№ РєРѕРјРїР°РЅРёРё РЅРµС‚ РѕС‚РєСЂС‹С‚С‹С… РїСЂРѕРІРѕРґРѕРє РїРѕ РєР»РёРµРЅС‚Р°Рј. Р”Р»СЏ РїРѕР»РЅРѕС†РµРЅРЅРѕРіРѕ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ РєР»Р°СЃСЃР° РІ РєРѕРјРїР°РЅРёРё РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РїРѕ РєСЂР°Р№РЅРµР№ РјРµСЂРµ 2 РїСЂРѕРІРѕРґРєРё");
+    this.assertNotEqual(1, lineCount, "SQL-Р·Р°РїСЂРѕСЃ РІРѕР·РІСЂР°С‚РёР» РѕРґРЅСѓ СЃС‚СЂРѕРєСѓ. Р”Р»СЏ РїРѕР»РЅРѕС†РµРЅРЅРѕРіРѕ С‚РµСЃС‚РёСЂРѕРІР°РЅРёСЏ РєР»Р°СЃСЃР° РІ РєРѕРјРїР°РЅРёРё РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РїРѕ РєСЂР°Р№РЅРµР№ РјРµСЂРµ 2 РїСЂРѕРІРѕРґРєРё");
 }

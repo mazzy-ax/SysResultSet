@@ -1,33 +1,33 @@
-// выполняет проверки и заполняет поле в указанной таблице из колонок resultSet
-// Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
+// РІС‹РїРѕР»РЅСЏРµС‚ РїСЂРѕРІРµСЂРєРё Рё Р·Р°РїРѕР»РЅСЏРµС‚ РїРѕР»Рµ РІ СѓРєР°Р·Р°РЅРЅРѕР№ С‚Р°Р±Р»РёС†Рµ РёР· РєРѕР»РѕРЅРѕРє resultSet
+// Р’РЅРёРјР°РЅРёРµ! РјРµС‚РѕРґ РІС‹Р·С‹РІР°РµС‚ mofidiedField, РµСЃР»Рё РЅР° С‚Р°Р±Р»РёС†Рµ РЅРµ СѓСЃС‚Р°РЅРѕРІР»РµРЅ skipDaraMethods(true)
 //
-// возвращает число скопированных полей:
-// = 1, если копирование было выполнено
-// = 0, если копирование не было выполнено
+// РІРѕР·РІСЂР°С‰Р°РµС‚ С‡РёСЃР»Рѕ СЃРєРѕРїРёСЂРѕРІР°РЅРЅС‹С… РїРѕР»РµР№:
+// = 1, РµСЃР»Рё РєРѕРїРёСЂРѕРІР°РЅРёРµ Р±С‹Р»Рѕ РІС‹РїРѕР»РЅРµРЅРѕ
+// = 0, РµСЃР»Рё РєРѕРїРёСЂРѕРІР°РЅРёРµ РЅРµ Р±С‹Р»Рѕ РІС‹РїРѕР»РЅРµРЅРѕ
 //
-// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
-// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
-// Например, "myTable_%1"
+// Р°СЂРіСѓРјРµРЅС‚ formatColumnName СЃРѕРґРµСЂР¶РёС‚ СЃС‚СЂРѕРєСѓ, РєРѕС‚РѕСЂР°СЏ РїРѕР·РІРѕР»РёС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°С‚СЊ РёРјСЏ РїРѕР»СЏ С‚Р°Р±Р»РёС†С‹ РІ РёРјСЏ РєРѕР»РѕРЅРєРё resultSet
+// РІ СЃС‚СЂРѕРєРµ РјРѕР¶РµС‚ СЃРѕРґРµСЂР¶Р°С‚СЃСЏ %1. РІРјРµСЃС‚Рѕ %1 Р±СѓРґРµС‚ РїРѕРґСЃС‚Р°РІР»РµРЅРѕ РёРјСЏ РїРѕР»СЏ РІ SQL.
+// РќР°РїСЂРёРјРµСЂ, "myTable_%1"
 int copyToField(str columnName, Common rec, SysDictField df)
 {
     anyType oldValue;
     anyType newValue;
 ;
-    Debug::assert(this.metaData() != null);  // метод get должен вызываться только после удачного next
+    Debug::assert(this.metaData() != null);  // РјРµС‚РѕРґ get РґРѕР»Р¶РµРЅ РІС‹Р·С‹РІР°С‚СЊСЃСЏ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ СѓРґР°С‡РЅРѕРіРѕ next
     Debug::assert(df != null);
     Debug::assert(rec.TableId == df.tableid());
 
     if( this.copyAllowed(columnName, df) )
     {
         oldValue = rec.(df.extendedFieldId());
-        newValue = this.value(columnName, df.baseType());    // читаем из resultSet
+        newValue = this.value(columnName, df.baseType());    // С‡РёС‚Р°РµРј РёР· resultSet
 
         if( oldValue != newValue )
         {
-            rec.(df.extendedFieldId()) = newValue;          // записываем значение в поле
+            rec.(df.extendedFieldId()) = newValue;          // Р·Р°РїРёСЃС‹РІР°РµРј Р·РЅР°С‡РµРЅРёРµ РІ РїРѕР»Рµ
 
             if( !rec.skipDataMethods() )
-                rec.modifiedField(df.extendedFieldId());    // вызываем метод modifiedField!!!!
+                rec.modifiedField(df.extendedFieldId());    // РІС‹Р·С‹РІР°РµРј РјРµС‚РѕРґ modifiedField!!!!
         }
         return 1;
     }
