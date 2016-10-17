@@ -1,3 +1,5 @@
+проект написан на X++ для **Microsoft Dynamics AX 4.0**. все версии: [ax3](../../tree/ax3/), [ax4](../../tree/ax4/), [ax2009](../../tree/ax2009/), [ax2012](../../tree/ax2012/)
+
 SysResultSet
 ======
 
