@@ -1,4 +1,0 @@
-﻿Types typeOf_idx(int columnIdx)
-{
-    return this.values().fieldType(columnIdx);
-}

@@ -1,4 +1,0 @@
-﻿public ResultSet resultSet()
-{
-    return resultSet;
-}

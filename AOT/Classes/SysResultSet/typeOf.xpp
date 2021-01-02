@@ -1,4 +1,0 @@
-﻿Types typeOf(str columnName)
-{
-    return this.typeOf_idx(this.values().index(columnName));
-}

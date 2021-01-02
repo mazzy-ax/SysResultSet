@@ -1,7 +1,0 @@
-﻿public void close()
-{;
-    resultSet.close();
-    metaData = null;
-    values = null;
-    valuesPrev = null;
-}

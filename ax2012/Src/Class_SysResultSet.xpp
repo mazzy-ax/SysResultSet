@@ -1,0 +1,562 @@
+﻿// Класс-обертка вокруг стандартного resultSet:
+// * позволяет удобно работать с resultSet, читать значения по именам колонок, а не только по индексу колонки
+// * реализует один метод get для чтения значений разных типов (см. метод ::getColumn())
+// * позволяет использовать статические методы в старом коде, который использует стандартный resultSet
+// а также обходит "особенности" стандартного resultSet
+// 1. каждое поле в стандартном resultSet можно читать только один раз. при попытке повторного чтения возникает ошибка
+// 2. поля в стандартном resultSEt можно читать только в порядке возрастания номеров.
+//    если сначала считать поле с номером 2, а затем попытаться считать поле с номером 1, то возникает ошибка.
+//
+// Автор первого варианта обертки - Роман Долгополов rdol (db - http://axforum.info/forums/member.php?u=2836)
+// в первом варианте был реализован один универсальный метод get при помощи resultSetMetaData
+//
+// Полный рефакторинг класса-обертки - mazzy (http://axforum.info/forums/member.php?u=10)
+// Struct values, binds, nameByField, copyTo, getNull, getPrev,
+// статические методы для выполнения запроса, для получения единственного значения,
+// статические методы для работы со стандартным resultSet в унаследованном коде
+//
+// Внимание! для работы базового класса ResultSet требуется разрешение SqlStatementExecutePermission
+// это разрешение выдается только на сервере.
+// Следите за тем, чтобы объекты этого класса создавались на сервере, чтобы не генерировать лишнего трафика между клиентом и сервером.
+//
+// mazzy, v1.03-ax6, 27.04.2016
+class SysResultSet
+{
+    #define.NA(0)
+
+    ResultSet           resultSet;
+    ResultSetMetaData   metaData;
+
+    boolean             insideLoop;     // next был выполнен успешно?
+
+    Struct              values;         // значения после next.
+    Struct              valuesPrev;     // значения до next.
+
+    Map                 bindsAll;       // map([tableid, format], map(columnName, SysDictField)) - привязки для CopyTo
+
+    // возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
+    // для каждого ключа [tableId, formatColumnName, dbBackend] хранится отдельный map
+    //
+    // если для данного ключа map еще не создавался, то создаст map,
+    // содержащий все возможные пары, для которых названия и типы совпадают
+    Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+    {
+        container       key     = [rec.TableId, formatColumnName, dbBackend];
+        Map             binds;
+        str             columnName;
+        SysDictTable    dt;
+        int             i;
+        SysDictField    df;
+
+        if( !bindsAll )
+            bindsAll = new Map(Types::Container, types::Class);
+
+        if( bindsAll.exists(key) )
+            return bindsAll.lookup(key);
+
+        Debug::assert(this.metaData() != null);
+
+        // создаем привязки полей к колонкам resultSet
+        binds  = new Map(Types::String, Types::Class);           // поля с привязкой
+        dt = SysDictTable::newTableId(rec.tableId);
+        if( dt.isTmp() && !dt.isTempDb() )
+        {
+            dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
+        }
+        for(i=1; i<=dt.columnCnt(); ++i )
+        {
+            df = new SysDictField(dt.id(), dt.column2id(i));
+            columnName = this.nameByField(df, formatColumnName, dbBackend);
+            if( this.copyAllowed(columnName, df) )
+                binds.insert(columnName, df);                    // добавляем только те поля, которые имеют привязку к resultSet
+        }
+
+        bindsAll.insert(key, binds);
+        return binds;
+    }
+
+    public void close()
+    {;
+        resultSet.close();
+        metaData = null;
+        values = null;
+        valuesPrev = null;
+    }
+
+    protected boolean copyAllowed(str columnName, SysDictField df)
+    {
+        if( df && columnName && this.values().exists(columnName) && df.saveContents() && df.isSql() && !df.isSystem() )
+        {
+            switch( this.typeOf(columnName) )
+            {
+                case Types::String:
+                case Types::VarString:
+                case Types::RString:
+                    switch( df.baseType() )
+                    {
+                        case Types::String:
+                        case Types::RString:
+                        case Types::VarString:
+                            return true;
+                    }
+
+                case Types::Integer:
+                case Types::Time:
+                case Types::Enum:
+                    switch( df.baseType() )
+                    {
+                        case Types::Integer:
+                        case Types::Real:
+                        case Types::Enum:
+                        case Types::Int64:
+                        case Types::Time:
+                            return true;
+                    }
+                case Types::UtcDateTime:
+                case Types::Date:
+                    switch( df.baseType() )
+                    {
+                        case Types::UtcDateTime:
+                        case Types::Date:
+                            return true;
+                    }
+                case Types::Real:
+                    return df.baseType() == Types::Real;
+                case Types::Guid:
+                    return df.baseType() == Types::Guid;
+                case Types::Int64:
+                    return df.baseType() == Types::Int64;
+                case Types::Container:
+                    return df.baseType() == Types::Container;
+            }
+        }
+        return false;
+    }
+
+    // заполняет поля в указанной таблице из колонок resultSet
+    // Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
+    //
+    // возвращает число полей, для которых было выполнено копирование
+    //
+    // аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+    // в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+    // Например, "myTable_%1"
+    int copyTo(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+    {
+        Map             binds   = this.binds(rec, formatColumnName, dbBackend);
+        MapEnumerator   me      = binds.getEnumerator();
+        int             cnt;
+
+        while( me.moveNext() )
+        {
+            cnt += this.copyToField(me.currentKey(), rec, me.currentValue());
+        }
+        return cnt;
+    }
+
+
+    // выполняет проверки и заполняет поле в указанной таблице из колонок resultSet
+    // Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
+    //
+    // возвращает число скопированных полей:
+    // = 1, если копирование было выполнено
+    // = 0, если копирование не было выполнено
+    //
+    // аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+    // в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+    // Например, "myTable_%1"
+    int copyToField(str columnName, Common rec, SysDictField df)
+    {
+        anyType oldValue;
+        anyType newValue;
+    ;
+        Debug::assert(this.metaData() != null);  // метод get должен вызываться только после удачного next
+        Debug::assert(df != null);
+        Debug::assert(rec.TableId == df.tableid());
+
+        if( this.copyAllowed(columnName, df) )
+        {
+            oldValue = rec.(df.extendedFieldId());
+            newValue = this.value(columnName, df.baseType());    // читаем из resultSet
+
+            if( oldValue != newValue )
+            {
+                rec.(df.extendedFieldId()) = newValue;          // записываем значение в поле
+
+                if( !rec.skipDataMethods() )
+                    rec.modifiedField(df.extendedFieldId());    // вызываем метод modifiedField!!!!
+            }
+            return 1;
+        }
+        return 0;
+    }
+
+
+    void finalize()
+    {
+        this.close();
+    }
+
+    public boolean inLoop()
+    {
+        return insideLoop;
+    }
+
+    ResultSetMetaData metaData()
+    {
+        // значение устанавливается после успешного next
+        return metaData;
+    }
+
+    // аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+    // в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+    // Например, "myTable_%1"
+    str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+    {
+        str columnName = df.name(dbBackend, df.arrayIndex());
+        if( formatColumnName )
+        {
+            columnName = strfmt(formatColumnName, columnName);
+        }
+        return columnName;
+    }
+
+    void new(ResultSet _resultSet)
+    {;
+        resultSet  = _resultSet;
+    }
+
+    public boolean next()
+    {
+        insideLoop = resultSet.next();  // выбираем следующую запись
+
+        if( !metaData )                 // выполняем только один раз
+        {
+            metaData = resultSet.getMetaData();
+        }
+
+        valuesPrev  = values;           // сохраняем старое значение
+        values      = null;             // новые значения еще не прочитаны
+
+        return insideLoop;
+    }
+
+    public ResultSet resultSet()
+    {
+        return resultSet;
+    }
+
+
+    Types typeOf(str columnName)
+    {
+        return this.typeOf_idx(this.values().index(columnName));
+    }
+
+    Types typeOf_idx(int columnIdx)
+    {
+        return this.values().fieldType(columnIdx);
+    }
+
+    // возвращает значение по имени колонки из заранее заполненного values
+    //
+    // у стандартного класса ResultSet есть особенности:
+    // 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+    // 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+    //    считать поле с номером 1, то возникает ошибка.
+    public anytype value(str columnName, Types preferType = types::AnyType)
+    {
+        return SysResultSet::convert(this.values().value(columnName), preferType); // не проверяем имя. пусть лучше ругнется когда программа обращается к несуществующему имени
+    }
+
+    public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
+    {
+        return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // не проверяем номер колонки. пусть лучше ругнется когда программа обращается к несуществующей колонке
+    }
+
+    // возвращает аксаптовское null-значение для указанной колонки
+    public anytype valueNull(str columnName, Types preferType = types::AnyType)
+    {
+        if( this.values().exists(columnName) )
+        {
+            return SysResultSet::getNull(this.typeof(columnName), preferType);
+        }
+        return #NA;
+    }
+
+    // возвращает аксаптовское null-значение для указанной колонки
+    public anytype valueNull_idx(int columnIdx, Types preferType = types::AnyType)
+    {
+        if( (1 <= columnIdx) && (columnIdx <= this.values().fields()) )
+        {
+            return SysResultSet::getNull(this.typeof_idx(columnIdx), preferType );
+        }
+        return #NA;
+    }
+
+    // возвращает значение, которое было в resultSet до выполнения метода next()
+    // этот метод можно вызывать до самого первого выполнения next()
+    public anytype valuePrev(str columnName, Types preferType = types::AnyType)
+    {
+        if( valuesPrev && columnName )
+        {
+            return SysResultSet::convert(valuesPrev.value(columnName), preferType);
+        }
+        return this.valueNull(columnName, preferType);
+    }
+
+    // возвращает значение, которое было в resultSet до выполнения метода next()
+    // этот метод можно вызывать до самого первого выполнения next()
+    public anytype valuePrev_idx(int columnIdx, Types preferType = types::AnyType)
+    {
+        if( (1 <= columnIdx) && valuesPrev)
+        {
+            return SysResultSet::convert(valuesPrev.valueIndex(columnIdx), preferType);
+        }
+        return this.valueNull_idx(columnIdx, preferType);
+    }
+
+    // читаем все данные из resultSet в массив
+    //
+    // у стандартного класса ResultSet есть особенности:
+    // 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+    // 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+    //    считать поле с номером 1, то возникает ошибка.
+    //
+    // данный метод гарантирует, что чтение будет выполнено последовательно и один раз
+    //
+    // соображение по поводу "читать только по мере необходимости"
+    // значение может понадобиться и после next() методу getPrev().
+    // Поэтому все равно придется считывать все значения из resultSet до того, как завершить next()
+    // а если придется - то чего себе жизнь усложнять? читаем сразу все колонки.
+    Struct values()
+    {
+        int n;
+        int i;
+        str name;
+    ;
+        if( !values )
+        {
+            Debug::assert(this.metaData() != null);                 // метод values должен вызываться только после удачного next
+
+            values = new Struct();
+            n = this.metaData().getColumnCount();
+            for(i=1; i<=n; ++i)
+            {
+                name = this.metaData().getColumnName(i);            // в дальнейшем имя нужно будет получать из values или из metadata
+                if( !name )
+                    name = strFmt("%1",i);
+
+                // внимание! запоминаем тот тип, который был в recordSet. преобразование дат будет позже, в окончательном get
+                values.add(name, SysResultSet::get(this.resultSet(), i, this.inLoop(), this.metaData().getColumnType(i), Types::AnyType));
+            }
+        }
+        return values;
+    }
+
+    public static SysResultSet construct(ResultSet _resultSet)
+    {
+        return new SysResultSet(_resultSet);
+    }
+
+    // values хранит даты как в SQL - с типом dateTime. нужно сконвертировать
+    public static anytype convert(AnyType value, Types preferType = types::AnyType)
+    {
+        anytype ret;
+
+        if( preferType == Types::AnyType )
+            return value;
+
+        if( typeOf(value) == preferType )
+            return value;
+
+        switch( preferType )
+        {
+            case Types::String:
+            case Types::VarString:
+            case Types::RString:
+                ret = any2str(value);
+                break;
+            case Types::Integer:
+            case Types::Time:
+                ret = any2int(value);
+                break;
+            case Types::Int64:
+                ret = any2int64(value);
+                break;
+            case Types::Real:
+                ret = any2real(value);
+                break;
+            case Types::Enum:
+                if( typeOf(value) == Types::Integer )
+                    ret = value;
+                else
+                    ret = any2enum(value);
+                break;
+            case Types::Date:
+                if( typeOf(value) == Types::UtcDateTime )
+                    ret = datetimeutil::date(value);
+                else
+                    ret = any2date(value);
+                break;
+            case Types::UtcDateTime:
+                if( typeOf(value) == Types::Date )
+                    ret = datetimeutil::date(value);
+                else
+                    ret = DateTimeUtil::anyToDateTime(value);
+                break;
+            case Types::Guid:
+                ret = any2guid(value);
+                break;
+            case Types::Container:
+                ret = [value];
+                break;
+            default:
+                ret = value;
+        }
+
+        return ret;
+    }
+
+
+    public static SysResultSet executeQuery(str sqlStatement, Connection connection = new Connection())
+    {
+        return SysResultSet::construct(SysResultSet::executeQuery_base(sqlStatement, connection));
+    }
+
+    server public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
+    {
+        SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
+
+        permission.assert();
+        return connection.createStatement().executeQuery(sqlStatement);
+    }
+
+    server public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
+    {
+        SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
+
+        permission.assert();
+        return connection.createStatement().executeUpdate(sqlStatement);
+    }
+
+    // метод выполняет преобразование, необходимое для чтения из resultSet
+    //
+    // у стандартного класса ResultSet есть особенности:
+    // 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+    // 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+    //    считать поле с номером 1, то возникает ошибка.
+    // Чтобы не парится с этими особенностями - используйте класс SysResultSet
+    //
+    // preferType - тип поля, куда будет помещено значение. Существенная разница проявляется в Date и UtcDateTime.
+    //
+    // метод по умолчанию возвращает тип UtcDateTime
+    // нужно выполнять дополнительную доводку типа для дат
+    // во-первых, это безопасно и не приводит к потере данных.
+    //            Поскольку DateTime всегда можно преобразовать к Date.
+    //            А вот обратное преобразование уже не восстановит потенциально потерянную информацию.
+    // во-вторых, к базе все равно надо обращаться по resultSet.getDateTime()
+    // чтобы получить именно date, стоит указать preferType = types::Date
+    //
+    // метод специально сделан статическим, чтобы его можно было использовать в старом коде, который работает со стандартным ResultSet
+    // хоть это и не очень хорошо с точки зрения производительности
+    public static AnyType get( ResultSet  resultSet,
+                               int        columnIdx   = 1,
+                               boolean    insideLoop  = true, // пытаемся читать значение, когда внутри цикла (next() вернул true). Или возвращаем nullValue() если находимся за циклом.
+                               int        columnType  = resultSet.getMetaData().getColumnType(ColumnIdx),
+                               types      preferType  = types::AnyType)
+    {
+        AnyType ret;
+        ;
+        Debug::assert(resultSet != null);
+        Debug::assert(columnIdx >= 1);
+
+        // it's kind of magic... constants
+        // see https://msdn.microsoft.com/en-us/library/resultsetmetadata.getcolumntype.aspx
+        //
+        switch( columnType )
+        {
+            case  0: // nvarchar = AX string
+            case  8: // varchar = AX string
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getString(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::String, preferType);
+                break;
+            case  1: // int = AX int
+            case  4: // tinyInt
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getInt(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::Integer, preferType);
+                break;
+            case  2: // numeric = AX real
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getReal(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::Real, preferType);
+                break;
+            case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getDateTime(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::UtcDateTime, preferType);
+                break;
+            case 45: // uniqueidentifier = AX GUID
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getGuid(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::Guid, preferType);
+                break;
+            case 49: // bigint = AX int64
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getInt64(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::Int64, preferType);
+                break;
+            case  7: // varbinary = AX container. resultSet не умеет!
+            default:
+                throw error(error::wrongUseOfFunction(funcname())); // не смогли понять что за тип
+        }
+        return ret;
+    }
+
+    public static anytype getFirst(str sqlStatement, str columnName = "", Connection connection = new Connection())
+    {
+        SysResultSet  res;
+
+        if( !columnName )
+            return SysResultSet::getFirst_idx(sqlStatement);
+
+        res = SysResultSet::executeQuery(sqlStatement, connection);
+        if( res.next() )
+            return res.value(columnName);
+
+        if( res.metaData() )
+            return res.valueNull(columnName);
+
+        return #NA;
+    }
+
+    public static anytype getFirst_idx(str sqlStatement, int columnIdx = 1, Connection connection = new Connection())
+    {
+        SysResultSet  res = SysResultSet::executeQuery(sqlStatement, connection);
+
+        if( res.next() )
+            return res.value_idx(columnIdx);
+
+        if( res.metaData() )
+            return res.valueNull_idx(columnIdx);
+
+        return #NA;
+    }
+
+    // возвращает аксаптовское null-значение для указанной колонки
+    public static anytype getNull(types t, Types preferType = types::AnyType)
+    {
+        if( preferType == Types::Date && t == types::UtcDateTime )
+        {
+            return DateNull();
+        }
+        return nullValueBaseType(t, true);
+    }
+}

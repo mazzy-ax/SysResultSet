@@ -1,4 +1,0 @@
-﻿public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
-{
-    return connection.createStatement().executeQuery(sqlStatement);
-}

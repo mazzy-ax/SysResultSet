@@ -1,0 +1,47 @@
+﻿// ������ ������ SysResultSet � �������������� �����, ������� ��� �������� � ResultSet
+// mazzy, v1.02-ax3, 24.04.2016
+//
+// Disclimer:
+// ������� ���� ���� �� �������� ��������� � ������� ���� - Oracle, MS SQL, Access, DBF � ������
+// �� resultSet �� ����� ������ �������� ���������. ���������� ������ connection.
+// ����� �� ��������� ������ ����������� ���� � �� ���������� ��������� ���� � �����
+// ������ ����������� �� ������������ ������.
+//
+static void tutorial_SysResultSet_Legacy(Args _args)
+{
+    #AVIfiles
+    Connection                      conn        = new Connection(); // � �������� ���� ����� ������ ���� ODBCconnection, OCIconnection �� ������ connectionString...
+    ResultSet                       resultSet;
+
+    str                             sqlStr      = @"select top 10 * from VENDTRANS as t";
+    //legacy: SqlStatementExecutePermission   permission  = new SqlStatementExecutePermission(sqlStr);
+    //legacy: Statement                       sqlStatement;
+
+    str                             description = funcname();
+    SysOperationProgress            progress    = SysOperationProgress::newGeneral(#AviSearch, description, 0);
+;
+    setprefix(description);
+
+    startLengthyOperation();
+    //legacy: permission.assert();
+    //legacy: sqlStatement = conn.createStatement();
+    //legacy: resultSet = sqlStatement.executeQuery(sqlStr);
+    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // ����� ����������� ��������� ��� � ������ ����������
+
+    while( resultSet.next() )
+    {
+        // legacyCode - �������� ��������, ��� ������� �������� � ������������ ������� � ������ ������� �������� ������ ���� ���
+        // ... = resultSet.getString(1)
+        // ... = resultSet.getInt(2)
+        // ... = resultSet.getReal(3)
+        //
+        // �� ������ �������� ��������� ����� ������ ��� ����������� �����
+        info(strFmt("%1", SysResultSet::get(resultSet, 4)));
+        info(strFmt("%1", SysResultSet::get(resultSet, 5)));
+        // ����� �������� �������� �� ������, ��� ���� �������� �������� ��� ���������� resultSet �� SysResultSet.
+
+        progress.incCount();
+    }
+    endLengthyOperation();
+    info("done.");
+}

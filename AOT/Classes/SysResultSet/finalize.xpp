@@ -1,4 +1,0 @@
-﻿void finalize()
-{
-    this.close();
-}

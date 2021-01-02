@@ -1,4 +1,0 @@
-﻿public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
-{
-    return connection.createStatement().executeUpdate(sqlStatement);
-}

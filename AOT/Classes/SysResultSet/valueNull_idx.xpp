@@ -1,9 +1,0 @@
-﻿// возвращает аксаптовское null-значение для указанной колонки
-public anytype valueNull_idx(int columnIdx, Types preferType = types::AnyType)
-{
-    if( (1 <= columnIdx) && (columnIdx <= this.values().fields()) )
-    {
-        return SysResultSet::getNull(this.typeof_idx(columnIdx), preferType );
-    }
-    return #NA;
-}

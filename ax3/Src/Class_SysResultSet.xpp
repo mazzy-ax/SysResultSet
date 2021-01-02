@@ -1,0 +1,515 @@
+﻿// �����-������� ������ ������������ resultSet:
+// * ��������� ������ �������� � resultSet, ������ �������� �� ������ �������, � �� ������ �� ������� �������
+// * ��������� ���� ����� get ��� ������ �������� ������ ����� (��. ����� ::getColumn())
+// * ��������� ������������ ����������� ������ � ������ ����, ������� ���������� ����������� resultSet
+// � ����� ������� "�����������" ������������ resultSet
+// 1. ������ ���� � ����������� resultSet ����� ������ ������ ���� ���. ��� ������� ���������� ������ ��������� ������
+// 2. ���� � ����������� resultSEt ����� ������ ������ � ������� ����������� �������.
+//    ���� ������� ������� ���� � ������� 2, � ����� ���������� ������� ���� � ������� 1, �� ��������� ������.
+//
+// ����� ������� �������� ������� - ����� ���������� rdol (db - http://axforum.info/forums/member.php?u=2836)
+// � ������ �������� ��� ���������� ���� ������������� ����� get ��� ������ resultSetMetaData
+//
+// ������ ����������� ������-������� - mazzy (http://axforum.info/forums/member.php?u=10)
+// Struct values, binds, nameByField, copyTo, getNull, getPrev,
+// ����������� ������ ��� ���������� �������, ��� ��������� ������������� ��������,
+// ����������� ������ ��� ������ �� ����������� resultSet � �������������� ����
+//
+// mazzy, v1.03-ax3, 24.04.2016
+class SysResultSet
+{
+    #define.NA(0)
+
+    ResultSet           resultSet;
+    ResultSetMetaData   metaData;
+
+    boolean             insideLoop;     // next ��� �������� �������?
+
+    Struct              values;         // �������� ����� next.
+    Struct              valuesPrev;     // �������� �� next.
+
+    Map                 bindsAll;       // map([tableid, format], map(columnName, SysDictField)) - �������� ��� CopyTo
+
+    // ���������� map(columnName, SysDictField) - �������� � ����� ��� ������� resultSet
+    // ��� ������� ����� [tableId, formatColumnName, dbBackend] �������� ��������� map
+    //
+    // ���� ��� ������� ����� map ��� �� ����������, �� ������� map,
+    // ���������� ��� ��������� ����, ��� ������� �������� � ���� ���������
+    Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+    {
+        container       key     = [rec.TableId, formatColumnName, dbBackend];
+        Map             binds;
+        str             columnName;
+        SysDictTable    dt;
+        int             i;
+        SysDictField    df;
+
+        if( !bindsAll )
+            bindsAll = new Map(Types::Container, types::Class);
+
+        if( bindsAll.exists(key) )
+            return bindsAll.lookup(key);
+
+        Debug::assert(this.metaData() != null);
+
+        // ������� �������� ����� � �������� resultSet
+        binds  = new Map(Types::String, Types::Class);           // ���� � ���������
+        dt = SysDictTable::newTableId(rec.tableId);
+        if( dt.isTmp() )
+        {
+            dbBackend = DbBackend::Native;                       // ��� ��������� ������� ��� SQL-����. ������� ���������� ������������
+        }
+        for(i=1; i<=dt.columnCnt(); ++i )
+        {
+            df = new SysDictField(dt.id(), dt.column2id(i));
+            columnName = this.nameByField(df, formatColumnName, dbBackend);
+            if( this.copyAllowed(columnName, df) )
+                binds.insert(columnName, df);                    // ��������� ������ �� ����, ������� ����� �������� � resultSet
+        }
+
+        bindsAll.insert(key, binds);
+        return binds;
+    }
+
+    public void close()
+    {;
+        resultSet.close();
+        metaData = null;
+        values = null;
+        valuesPrev = null;
+    }
+
+    protected boolean copyAllowed(str columnName, SysDictField df)
+    {
+        if( df && columnName && this.values().exists(columnName) && df.isSql() && !df.isSystem() )
+        {
+            switch( this.typeOf(columnName) )
+            {
+                case Types::String:
+                case Types::VarString:
+                case Types::RString:
+                    switch( df.baseType() )
+                    {
+                        case Types::String:
+                        case Types::RString:
+                        case Types::VarString:
+                            return true;
+                    }
+
+                case Types::Integer:
+                case Types::Enum:
+                    switch( df.baseType() )
+                    {
+                        case Types::Integer:
+                        case Types::Real:
+                        case Types::Enum:
+                            return true;
+                    }
+                case Types::Date:
+                    switch( df.baseType() )
+                    {
+                        case Types::Date:
+                            return true;
+                    }
+                case Types::DateTime:
+                    return df.baseType() == Types::DateTime;
+                case Types::Real:
+                    return df.baseType() == Types::Real;
+                case Types::Container:
+                    return df.baseType() == Types::Container;
+            }
+        }
+        return false;
+    }
+
+    // ��������� ���� � ��������� ������� �� ������� resultSet
+    // ��������! ����� �������� mofidiedField, ���� �� ������� �� ���������� skipDaraMethods(true)
+    //
+    // ���������� ����� �����, ��� ������� ���� ��������� �����������
+    //
+    // �������� formatColumnName �������� ������, ������� �������� ������������� ��� ���� ������� � ��� ������� resultSet
+    // � ������ ����� ���������� %1. ������ %1 ����� ����������� ��� ���� � SQL.
+    // ��������, "myTable_%1"
+    int copyTo(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+    {
+        Map             binds   = this.binds(rec, formatColumnName, dbBackend);
+        MapEnumerator   me      = binds.getEnumerator();
+        int             cnt;
+
+        while( me.moveNext() )
+        {
+            cnt += this.copyToField(me.currentKey(), rec, me.currentValue());
+        }
+        return cnt;
+    }
+
+
+    // ��������� �������� � ��������� ���� � ��������� ������� �� ������� resultSet
+    // ��������! ����� �������� mofidiedField, ���� �� ������� �� ���������� skipDaraMethods(true)
+    //
+    // ���������� ����� ������������� �����:
+    // = 1, ���� ����������� ���� ���������
+    // = 0, ���� ����������� �� ���� ���������
+    //
+    // �������� formatColumnName �������� ������, ������� �������� ������������� ��� ���� ������� � ��� ������� resultSet
+    // � ������ ����� ���������� %1. ������ %1 ����� ����������� ��� ���� � SQL.
+    // ��������, "myTable_%1"
+    int copyToField(str columnName, Common rec, SysDictField df)
+    {
+        anyType oldValue;
+        anyType newValue;
+    ;
+        Debug::assert(this.metaData() != null);  // ����� get ������ ���������� ������ ����� �������� next
+        Debug::assert(df != null);
+        Debug::assert(rec.TableId == df.tableid());
+
+        if( this.copyAllowed(columnName, df) )
+        {
+            oldValue = rec.(df.extendedFieldId());
+            newValue = this.value(columnName, df.baseType());    // ������ �� resultSet
+
+            if( oldValue != newValue )
+            {
+                rec.(df.extendedFieldId()) = newValue;          // ���������� �������� � ����
+
+                if( !rec.skipDataMethods() )
+                    rec.modifiedField(df.extendedFieldId());    // �������� ����� modifiedField!!!!
+            }
+            return 1;
+        }
+        return 0;
+    }
+
+
+    void finalize()
+    {
+        this.close();
+    }
+
+    public boolean inLoop()
+    {
+        return insideLoop;
+    }
+
+    ResultSetMetaData metaData()
+    {
+        // �������� ��������������� ����� ��������� next
+        return metaData;
+    }
+
+    // �������� formatColumnName �������� ������, ������� �������� ������������� ��� ���� ������� � ��� ������� resultSet
+    // � ������ ����� ���������� %1. ������ %1 ����� ����������� ��� ���� � SQL.
+    // ��������, "myTable_%1"
+    str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+    {
+        str columnName = df.name(dbBackend, df.arrayIndex());
+        if( formatColumnName )
+        {
+            columnName = strfmt(formatColumnName, columnName);
+        }
+        return columnName;
+    }
+
+    void new(ResultSet _resultSet)
+    {;
+        resultSet  = _resultSet;
+    }
+
+    public boolean next()
+    {
+        insideLoop = resultSet.next();  // �������� ��������� ������
+
+        if( !metaData )                 // ��������� ������ ���� ���
+        {
+            metaData = resultSet.getMetaData();
+        }
+
+        valuesPrev  = values;           // ��������� ������ ��������
+        values      = null;             // ����� �������� ��� �� ���������
+
+        return insideLoop;
+    }
+
+    public ResultSet resultSet()
+    {
+        return resultSet;
+    }
+
+
+    Types typeOf(str columnName)
+    {
+        return this.typeOf_idx(this.values().index(columnName));
+    }
+
+    Types typeOf_idx(int columnIdx)
+    {
+        return this.values().fieldType(columnIdx);
+    }
+
+    // ���������� �������� �� ����� ������� �� ������� ������������ values
+    //
+    // � ������������ ������ ResultSet ���� �����������:
+    // 1. ������ ���� ����� ������ ������ ���� ���. ��� ������� ���������� ������ ��������� ������
+    // 2. ���� ����� ������ ������ � ������� ����������� �������. ���� ������� ������� ���� � ������� 2, � ����� ����������
+    //    ������� ���� � ������� 1, �� ��������� ������.
+    public anytype value(str columnName, Types preferType = types::AnyType)
+    {
+        return SysResultSet::convert(this.values().value(columnName), preferType); // �� ��������� ���. ����� ����� �������� ����� ��������� ���������� � ��������������� �����
+    }
+
+    public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
+    {
+        return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // �� ��������� ����� �������. ����� ����� �������� ����� ��������� ���������� � �������������� �������
+    }
+
+    // ���������� ������������ null-�������� ��� ��������� �������
+    public anytype valueNull(str columnName, Types preferType = types::AnyType)
+    {
+        if( columnName && this.values().exists(columnName) )
+        {
+            return SysResultSet::getNull(this.typeof(columnName), preferType);
+        }
+        return #NA;
+    }
+
+    // ���������� ������������ null-�������� ��� ��������� �������
+    public anytype valueNull_idx(int columnIdx, Types preferType = types::AnyType)
+    {
+        if( (1 <= columnIdx) && (columnIdx <= this.values().fields()) )
+        {
+            return SysResultSet::getNull(this.typeof_idx(columnIdx), preferType );
+        }
+        return #NA;
+    }
+
+    // ���������� ��������, ������� ���� � resultSet �� ���������� ������ next()
+    // ���� ����� ����� �������� �� ������ ������� ���������� next()
+    public anytype valuePrev(str columnName, Types preferType = types::AnyType)
+    {
+        if( valuesPrev && columnName )
+        {
+            return SysResultSet::convert(valuesPrev.value(columnName), preferType);
+        }
+        return this.valueNull(columnName, preferType);
+    }
+
+    // ���������� ��������, ������� ���� � resultSet �� ���������� ������ next()
+    // ���� ����� ����� �������� �� ������ ������� ���������� next()
+    public anytype valuePrev_idx(int columnIdx, Types preferType = types::AnyType)
+    {
+        if( (1 <= columnIdx) && valuesPrev)
+        {
+            return SysResultSet::convert(valuesPrev.valueIndex(columnIdx), preferType);
+        }
+        return this.valueNull_idx(columnIdx, preferType);
+    }
+
+    // ������ ��� ������ �� resultSet � ������
+    //
+    // � ������������ ������ ResultSet ���� �����������:
+    // 1. ������ ���� ����� ������ ������ ���� ���. ��� ������� ���������� ������ ��������� ������
+    // 2. ���� ����� ������ ������ � ������� ����������� �������. ���� ������� ������� ���� � ������� 2, � ����� ����������
+    //    ������� ���� � ������� 1, �� ��������� ������.
+    //
+    // ������ ����� �����������, ��� ������ ����� ��������� ��������������� � ���� ���
+    //
+    // ����������� �� ������ "������ ������ �� ���� �������������"
+    // �������� ����� ������������ � ����� next() ������ getPrev().
+    // ������� ��� ����� �������� ��������� ��� �������� �� resultSet �� ����, ��� ��������� next()
+    // � ���� �������� - �� ���� ���� ����� ���������? ������ ����� ��� �������.
+    Struct values()
+    {
+        int n;
+        int i;
+        str name;
+    ;
+        if( !values )
+        {
+            Debug::assert(this.metaData() != null);                 // ����� values ������ ���������� ������ ����� �������� next
+
+            values = new Struct();
+            n = this.metaData().getColumnCount();
+            for(i=1; i<=n; ++i)
+            {
+                name = this.metaData().getColumnName(i);            // � ���������� ��� ����� ����� �������� �� values ��� �� metadata
+                if( !name )
+                    name = strFmt("%1",i);
+
+                // ��������! ���������� ��� ���, ������� ��� � recordSet. �������������� ��� ����� �����, � ������������� get
+                values.add(name, SysResultSet::get(this.resultSet(), i, this.inLoop(), this.metaData().getColumnType(i), Types::AnyType));
+            }
+        }
+        return values;
+    }
+
+    public static SysResultSet construct(ResultSet _resultSet)
+    {
+        return new SysResultSet(_resultSet);
+    }
+
+    // values ������ ���� ��� � SQL - � ����� dateTime. ����� ���������������
+    public static anytype convert(AnyType value, Types preferType = types::AnyType)
+    {
+        anytype ret;
+
+        if( preferType == Types::AnyType )
+            return value;
+
+        if( typeOf(value) == preferType )
+            return value;
+
+        switch( preferType )
+        {
+            case Types::String:
+            case Types::VarString:
+            case Types::RString:
+                ret = any2str(value);
+                break;
+            case Types::Integer:
+                ret = any2int(value);
+                break;
+            case Types::Real:
+                ret = any2real(value);
+                break;
+            case Types::Enum:
+                if( typeOf(value) == Types::Integer )
+                    ret = value;
+                else
+                    ret = any2enum(value);
+                break;
+            case Types::Date:
+                ret = any2date(value);
+                break;
+            case Types::Container:
+                ret = [value];
+                break;
+            default:
+                ret = value;
+        }
+
+        return ret;
+    }
+
+
+    public static SysResultSet executeQuery(str sqlStatement, Connection connection = new Connection())
+    {
+        return SysResultSet::construct(SysResultSet::executeQuery_base(sqlStatement, connection));
+    }
+
+    public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
+    {
+        return connection.createStatement().executeQuery(sqlStatement);
+    }
+
+    public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
+    {
+        return connection.createStatement().executeUpdate(sqlStatement);
+    }
+
+    // ����� ��������� ��������������, ����������� ��� ������ �� resultSet
+    //
+    // � ������������ ������ ResultSet ���� �����������:
+    // 1. ������ ���� ����� ������ ������ ���� ���. ��� ������� ���������� ������ ��������� ������
+    // 2. ���� ����� ������ ������ � ������� ����������� �������. ���� ������� ������� ���� � ������� 2, � ����� ����������
+    //    ������� ���� � ������� 1, �� ��������� ������.
+    // ����� �� ������� � ����� ������������� - ����������� ����� SysResultSet
+    //
+    // preferType - ��� ����, ���� ����� �������� ��������. ������������ ������� ����������� � Date � UtcDateTime.
+    //
+    // ����� �� ��������� ���������� ��� UtcDateTime
+    // ����� ��������� �������������� ������� ���� ��� ���
+    // ��-������, ��� ��������� � �� �������� � ������ ������.
+    //            ��������� DateTime ������ ����� ������������� � Date.
+    //            � ��� �������� �������������� ��� �� ����������� ������������ ���������� ����������.
+    // ��-������, � ���� ��� ����� ���� ���������� �� resultSet.getDateTime()
+    // ����� �������� ������ date, ����� ������� preferType = types::Date
+    //
+    // ����� ���������� ������ �����������, ����� ��� ����� ���� ������������ � ������ ����, ������� �������� �� ����������� ResultSet
+    // ���� ��� � �� ����� ������ � ����� ������ ������������������
+    public static AnyType get( ResultSet  resultSet,
+                               int        columnIdx   = 1,
+                               boolean    insideLoop  = true, // �������� ������ ��������, ����� ������ ����� (next() ������ true). ��� ���������� nullValue() ���� ��������� �� ������.
+                               int        columnType  = resultSet.getMetaData().getColumnType(ColumnIdx),
+                               types      preferType  = types::AnyType)
+    {
+        AnyType ret;
+        ;
+        Debug::assert(resultSet != null);
+        Debug::assert(columnIdx >= 1);
+
+        // it's kind of magic... constants
+        // see https://msdn.microsoft.com/en-us/library/resultsetmetadata.getcolumntype.aspx
+        //
+        switch( columnType )
+        {
+            case  0: // nvarchar = AX string
+            case  8: // varchar = AX string
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getString(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::String, preferType);
+                break;
+            case  1: // int = AX int
+            case  4: // tinyInt
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getInt(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::Integer, preferType);
+                break;
+            case  2: // numeric = AX real
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getReal(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::Real, preferType);
+                break;
+            case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
+                if( insideLoop )
+                    ret = SysResultSet::convert(resultSet.getDate(columnIdx), preferType);
+                else
+                    ret = SysResultSet::getNull(Types::DateTime, preferType);
+                break;
+            case 45: // uniqueidentifier = AX GUID
+            case 49: // bigint = AX int64
+            case  7: // varbinary = AX container. resultSet �� �����!
+            default:
+                throw error(error::wrongUseOfFunction(funcname())); // �� ������ ������ ��� �� ���
+        }
+        return ret;
+    }
+
+    public static anytype getFirst(str sqlStatement, str columnName = "", Connection connection = new Connection())
+    {
+        SysResultSet  res;
+
+        if( !columnName )
+            return SysResultSet::getFirst_idx(sqlStatement);
+
+        res = SysResultSet::executeQuery(sqlStatement, connection);
+        if( res.next() )
+            return res.value(columnName);
+
+        if( res.metaData() )
+            return res.valueNull(columnName);
+
+        return #NA;
+    }
+
+    public static anytype getFirst_idx(str sqlStatement, int columnIdx = 1, Connection connection = new Connection())
+    {
+        SysResultSet  res = SysResultSet::executeQuery(sqlStatement, connection);
+
+        if( res.next() )
+            return res.value_idx(columnIdx);
+
+        if( res.metaData() )
+            return res.valueNull_idx(columnIdx);
+
+        return #NA;
+    }
+
+    // ���������� ������������ null-�������� ��� ��������� �������
+    public static anytype getNull(types t, Types preferType = types::AnyType)
+    {
+        return nullValueBaseType(t, true);
+    }
+}

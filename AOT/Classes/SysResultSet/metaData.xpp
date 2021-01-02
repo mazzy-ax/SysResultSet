@@ -1,5 +1,0 @@
-﻿ResultSetMetaData metaData()
-{
-    // значение устанавливается после успешного next
-    return metaData;
-}

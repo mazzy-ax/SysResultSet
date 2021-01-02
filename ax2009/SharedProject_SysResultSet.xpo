@@ -1,0 +1,1151 @@
+﻿Exportfile for AOT version 1.0 or later
+Formatversion: 1
+
+***Element: CLS
+
+; Microsoft Dynamics AX Class: SysResultSet выгружен
+; --------------------------------------------------------------------------------
+  CLSVERSION 1
+  
+  CLASS #SysResultSet
+    Id 53944
+    PROPERTIES
+      Name                #SysResultSet
+      Extends             #
+      RunOn               #Called from
+    ENDPROPERTIES
+    
+    METHODS
+      Version: 3
+      SOURCE #binds
+        #// возвращает map(columnName, SysDictField) - привязки к полям для колонок resultSet
+        #// для каждого ключа [tableId, formatColumnName, dbBackend] хранится отдельный map
+        #//
+        #// если для данного ключа map еще не создавался, то создаст map,
+        #// содержащий все возможные пары, для которых названия и типы совпадают
+        #Map binds(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+        #{
+        #    container       key     = [rec.TableId, formatColumnName, dbBackend];
+        #    Map             binds;
+        #    str             columnName;
+        #    SysDictTable    dt;
+        #    int             i;
+        #    SysDictField    df;
+        #
+        #    if( !bindsAll )
+        #        bindsAll = new Map(Types::Container, types::Class);
+        #
+        #    if( bindsAll.exists(key) )
+        #        return bindsAll.lookup(key);
+        #
+        #    Debug::assert(this.metaData() != null);
+        #
+        #    // создаем привязки полей к колонкам resultSet
+        #    binds  = new Map(Types::String, Types::Class);           // поля с привязкой
+        #    dt = SysDictTable::newTableId(rec.tableId);
+        #    if( dt.isTmp() )
+        #    {
+        #        dbBackend = DbBackend::Native;                       // для временной таблицы нет SQL-имен. поэтому используем Аксаптовские
+        #    }
+        #    for(i=1; i<=dt.columnCnt(); ++i )
+        #    {
+        #        df = new SysDictField(dt.id(), dt.column2id(i));
+        #        columnName = this.nameByField(df, formatColumnName, dbBackend);
+        #        if( this.copyAllowed(columnName, df) )
+        #            binds.insert(columnName, df);                    // добавляем только те поля, которые имеют привязку к resultSet
+        #    }
+        #
+        #    bindsAll.insert(key, binds);
+        #    return binds;
+        #}
+      ENDSOURCE
+      SOURCE #classDeclaration
+        #// Класс-обертка вокруг стандартного resultSet:
+        #// * позволяет удобно работать с resultSet, читать значения по именам колонок, а не только по индексу колонки
+        #// * реализует один метод get для чтения значений разных типов (см. метод ::getColumn())
+        #// * позволяет использовать статические методы в старом коде, который использует стандартный resultSet
+        #// а также обходит "особенности" стандартного resultSet
+        #// 1. каждое поле в стандартном resultSet можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля в стандартном resultSEt можно читать только в порядке возрастания номеров.
+        #//    если сначала считать поле с номером 2, а затем попытаться считать поле с номером 1, то возникает ошибка.
+        #//
+        #// Автор первого варианта обертки - Роман Долгополов rdol (db - http://axforum.info/forums/member.php?u=2836)
+        #// в первом варианте был реализован один универсальный метод get при помощи resultSetMetaData
+        #//
+        #// Полный рефакторинг класса-обертки - mazzy (http://axforum.info/forums/member.php?u=10)
+        #// Struct values, binds, nameByField, copyTo, getNull, getPrev,
+        #// статические методы для выполнения запроса, для получения единственного значения,
+        #// статические методы для работы со стандартным resultSet в унаследованном коде
+        #//
+        #// Внимание! для работы базового класса ResultSet требуется разрешение SqlStatementExecutePermission
+        #// это разрешение выдается только на сервере.
+        #// Следите за тем, чтобы объекты этого класса создавались на сервере, чтобы не генерировать лишнего трафика между клиентом и сервером.
+        #//
+        #// mazzy, v1.03-ax5, 27.04.2016
+        #class SysResultSet
+        #{
+        #    #define.NA(0)
+        #
+        #    ResultSet           resultSet;
+        #    ResultSetMetaData   metaData;
+        #
+        #    boolean             insideLoop;     // next был выполнен успешно?
+        #
+        #    Struct              values;         // значения после next.
+        #    Struct              valuesPrev;     // значения до next.
+        #
+        #    Map                 bindsAll;       // map([tableid, format], map(columnName, SysDictField)) - привязки для CopyTo
+        #}
+      ENDSOURCE
+      SOURCE #close
+        #public void close()
+        #{;
+        #    resultSet.close();
+        #    metaData = null;
+        #    values = null;
+        #    valuesPrev = null;
+        #}
+      ENDSOURCE
+      SOURCE #copyAllowed
+        #protected boolean copyAllowed(str columnName, SysDictField df)
+        #{
+        #    if( df && columnName && this.values().exists(columnName) && df.saveContents() && df.isSql() && !df.isSystem() )
+        #    {
+        #        switch( this.typeOf(columnName) )
+        #        {
+        #            case Types::String:
+        #            case Types::VarString:
+        #            case Types::RString:
+        #                switch( df.baseType() )
+        #                {
+        #                    case Types::String:
+        #                    case Types::RString:
+        #                    case Types::VarString:
+        #                        return true;
+        #                }
+        #
+        #            case Types::Integer:
+        #            case Types::Time:
+        #            case Types::Enum:
+        #                switch( df.baseType() )
+        #                {
+        #                    case Types::Integer:
+        #                    case Types::Real:
+        #                    case Types::Enum:
+        #                    case Types::Int64:
+        #                    case Types::Time:
+        #                        return true;
+        #                }
+        #            case Types::UtcDateTime:
+        #            case Types::Date:
+        #                switch( df.baseType() )
+        #                {
+        #                    case Types::UtcDateTime:
+        #                    case Types::Date:
+        #                        return true;
+        #                }
+        #            case Types::Real:
+        #                return df.baseType() == Types::Real;
+        #            case Types::Guid:
+        #                return df.baseType() == Types::Guid;
+        #            case Types::Int64:
+        #                return df.baseType() == Types::Int64;
+        #            case Types::Container:
+        #                return df.baseType() == Types::Container;
+        #        }
+        #    }
+        #    return false;
+        #}
+      ENDSOURCE
+      SOURCE #copyTo
+        #// заполняет поля в указанной таблице из колонок resultSet
+        #// Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
+        #//
+        #// возвращает число полей, для которых было выполнено копирование
+        #//
+        #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+        #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+        #// Например, "myTable_%1"
+        #int copyTo(Common rec, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+        #{
+        #    Map             binds   = this.binds(rec, formatColumnName, dbBackend);
+        #    MapEnumerator   me      = binds.getEnumerator();
+        #    int             cnt;
+        #
+        #    while( me.moveNext() )
+        #    {
+        #        cnt += this.copyToField(me.currentKey(), rec, me.currentValue());
+        #    }
+        #    return cnt;
+        #}
+        #
+      ENDSOURCE
+      SOURCE #copyToField
+        #// выполняет проверки и заполняет поле в указанной таблице из колонок resultSet
+        #// Внимание! метод вызывает mofidiedField, если на таблице не установлен skipDaraMethods(true)
+        #//
+        #// возвращает число скопированных полей:
+        #// = 1, если копирование было выполнено
+        #// = 0, если копирование не было выполнено
+        #//
+        #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+        #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+        #// Например, "myTable_%1"
+        #int copyToField(str columnName, Common rec, SysDictField df)
+        #{
+        #    anyType oldValue;
+        #    anyType newValue;
+        #;
+        #    Debug::assert(this.metaData() != null);  // метод get должен вызываться только после удачного next
+        #    Debug::assert(df != null);
+        #    Debug::assert(rec.TableId == df.tableid());
+        #
+        #    if( this.copyAllowed(columnName, df) )
+        #    {
+        #        oldValue = rec.(df.extendedFieldId());
+        #        newValue = this.value(columnName, df.baseType());    // читаем из resultSet
+        #
+        #        if( oldValue != newValue )
+        #        {
+        #            rec.(df.extendedFieldId()) = newValue;          // записываем значение в поле
+        #
+        #            if( !rec.skipDataMethods() )
+        #                rec.modifiedField(df.extendedFieldId());    // вызываем метод modifiedField!!!!
+        #        }
+        #        return 1;
+        #    }
+        #    return 0;
+        #}
+        #
+      ENDSOURCE
+      SOURCE #finalize
+        #void finalize()
+        #{
+        #    this.close();
+        #}
+      ENDSOURCE
+      SOURCE #inLoop
+        #public boolean inLoop()
+        #{
+        #    return insideLoop;
+        #}
+      ENDSOURCE
+      SOURCE #metaData
+        #ResultSetMetaData metaData()
+        #{
+        #    // значение устанавливается после успешного next
+        #    return metaData;
+        #}
+      ENDSOURCE
+      SOURCE #nameByField
+        #// аргумент formatColumnName содержит строку, которая позволит преобразовать имя поля таблицы в имя колонки resultSet
+        #// в строке может содержатся %1. вместо %1 будет подставлено имя поля в SQL.
+        #// Например, "myTable_%1"
+        #str nameByField(SysDictField df, str formatColumnName = "", DbBackend dbBackend = DbBackend::Sql)
+        #{
+        #    str columnName = df.name(dbBackend, df.arrayIndex());
+        #    if( formatColumnName )
+        #    {
+        #        columnName = strfmt(formatColumnName, columnName);
+        #    }
+        #    return columnName;
+        #}
+      ENDSOURCE
+      SOURCE #new
+        #void new(ResultSet _resultSet)
+        #{;
+        #    resultSet  = _resultSet;
+        #}
+      ENDSOURCE
+      SOURCE #next
+        #public boolean next()
+        #{
+        #    insideLoop = resultSet.next();  // выбираем следующую запись
+        #
+        #    if( !metaData )                 // выполняем только один раз
+        #    {
+        #        metaData = resultSet.getMetaData();
+        #    }
+        #
+        #    valuesPrev  = values;           // сохраняем старое значение
+        #    values      = null;             // новые значения еще не прочитаны
+        #
+        #    return insideLoop;
+        #}
+      ENDSOURCE
+      SOURCE #resultSet
+        #public ResultSet resultSet()
+        #{
+        #    return resultSet;
+        #}
+        #
+      ENDSOURCE
+      SOURCE #typeOf
+        #Types typeOf(str columnName)
+        #{
+        #    return this.typeOf_idx(this.values().index(columnName));
+        #}
+      ENDSOURCE
+      SOURCE #typeOf_idx
+        #Types typeOf_idx(int columnIdx)
+        #{
+        #    return this.values().fieldType(columnIdx);
+        #}
+      ENDSOURCE
+      SOURCE #value
+        #// возвращает значение по имени колонки из заранее заполненного values
+        #//
+        #// у стандартного класса ResultSet есть особенности:
+        #// 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+        #//    считать поле с номером 1, то возникает ошибка.
+        #public anytype value(str columnName, Types preferType = types::AnyType)
+        #{
+        #    return SysResultSet::convert(this.values().value(columnName), preferType); // не проверяем имя. пусть лучше ругнется когда программа обращается к несуществующему имени
+        #}
+      ENDSOURCE
+      SOURCE #value_idx
+        #public anytype value_idx(int columnIdx, Types preferType = types::AnyType)
+        #{
+        #    return SysResultSet::convert(this.values().valueIndex(columnIdx), preferType); // не проверяем номер колонки. пусть лучше ругнется когда программа обращается к несуществующей колонке
+        #}
+      ENDSOURCE
+      SOURCE #valueNull
+        #// возвращает аксаптовское null-значение для указанной колонки
+        #public anytype valueNull(str columnName, Types preferType = types::AnyType)
+        #{
+        #    if( this.values().exists(columnName) )
+        #    {
+        #        return SysResultSet::getNull(this.typeof(columnName), preferType);
+        #    }
+        #    return #NA;
+        #}
+      ENDSOURCE
+      SOURCE #valueNull_idx
+        #// возвращает аксаптовское null-значение для указанной колонки
+        #public anytype valueNull_idx(int columnIdx, Types preferType = types::AnyType)
+        #{
+        #    if( (1 <= columnIdx) && (columnIdx <= this.values().fields()) )
+        #    {
+        #        return SysResultSet::getNull(this.typeof_idx(columnIdx), preferType );
+        #    }
+        #    return #NA;
+        #}
+      ENDSOURCE
+      SOURCE #valuePrev
+        #// возвращает значение, которое было в resultSet до выполнения метода next()
+        #// этот метод можно вызывать до самого первого выполнения next()
+        #public anytype valuePrev(str columnName, Types preferType = types::AnyType)
+        #{
+        #    if( valuesPrev && columnName )
+        #    {
+        #        return SysResultSet::convert(valuesPrev.value(columnName), preferType);
+        #    }
+        #    return this.getNull(columnName, preferType);
+        #}
+      ENDSOURCE
+      SOURCE #valuePrev_idx
+        #// возвращает значение, которое было в resultSet до выполнения метода next()
+        #// этот метод можно вызывать до самого первого выполнения next()
+        #public anytype valuePrev_idx(int columnIdx, Types preferType = types::AnyType)
+        #{
+        #    if( (1 <= columnIdx) && valuesPrev)
+        #    {
+        #        return SysResultSet::convert(valuesPrev.valueIndex(columnIdx), preferType);
+        #    }
+        #    return this.valueNull_idx(columnIdx, preferType);
+        #}
+      ENDSOURCE
+      SOURCE #values
+        #// читаем все данные из resultSet в массив
+        #//
+        #// у стандартного класса ResultSet есть особенности:
+        #// 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+        #//    считать поле с номером 1, то возникает ошибка.
+        #//
+        #// данный метод гарантирует, что чтение будет выполнено последовательно и один раз
+        #//
+        #// соображение по поводу "читать только по мере необходимости"
+        #// значение может понадобиться и после next() методу getPrev().
+        #// Поэтому все равно придется считывать все значения из resultSet до того, как завершить next()
+        #// а если придется - то чего себе жизнь усложнять? читаем сразу все колонки.
+        #Struct values()
+        #{
+        #    int n;
+        #    int i;
+        #    str name;
+        #;
+        #    if( !values )
+        #    {
+        #        Debug::assert(this.metaData() != null);                 // метод values должен вызываться только после удачного next
+        #
+        #        values = new Struct();
+        #        n = this.metaData().getColumnCount();
+        #        for(i=1; i<=n; ++i)
+        #        {
+        #            name = this.metaData().getColumnName(i);            // в дальнейшем имя нужно будет получать из values или из metadata
+        #            if( !name )
+        #                name = strFmt("%1",i);
+        #
+        #            // внимание! запоминаем тот тип, который был в recordSet. преобразование дат будет позже, в окончательном get
+        #            values.add(name, SysResultSet::get(this.resultSet(), i, this.inLoop(), this.metaData().getColumnType(i), Types::AnyType));
+        #        }
+        #    }
+        #    return values;
+        #}
+      ENDSOURCE
+      SOURCE #construct
+        #public static SysResultSet construct(ResultSet _resultSet)
+        #{
+        #    return new SysResultSet(_resultSet);
+        #}
+      ENDSOURCE
+      SOURCE #convert
+        #// values хранит даты как в SQL - с типом dateTime. нужно сконвертировать
+        #public static anytype convert(AnyType value, Types preferType = types::AnyType)
+        #{
+        #    anytype ret;
+        #
+        #    if( preferType == Types::AnyType )
+        #        return value;
+        #
+        #    if( typeOf(value) == preferType )
+        #        return value;
+        #
+        #    switch( preferType )
+        #    {
+        #        case Types::String:
+        #        case Types::VarString:
+        #        case Types::RString:
+        #            ret = any2str(value);
+        #            break;
+        #        case Types::Integer:
+        #        case Types::Time:
+        #            ret = any2int(value);
+        #            break;
+        #        case Types::Int64:
+        #            ret = any2int64(value);
+        #            break;
+        #        case Types::Real:
+        #            ret = any2real(value);
+        #            break;
+        #        case Types::Enum:
+        #            if( typeOf(value) == Types::Integer )
+        #                ret = value;
+        #            else
+        #                ret = any2enum(value);
+        #            break;
+        #        case Types::Date:
+        #            if( typeOf(value) == Types::UtcDateTime )
+        #                ret = datetimeutil::date(value);
+        #            else
+        #                ret = any2date(value);
+        #            break;
+        #        case Types::UtcDateTime:
+        #            if( typeOf(value) == Types::Date )
+        #                ret = datetimeutil::date(value);
+        #            else
+        #                ret = DateTimeUtil::anyToDateTime(value);
+        #            break;
+        #        case Types::Guid:
+        #            ret = any2guid(value);
+        #            break;
+        #        case Types::Container:
+        #            ret = [value];
+        #            break;
+        #        default:
+        #            ret = value;
+        #    }
+        #
+        #    return ret;
+        #}
+        #
+      ENDSOURCE
+      SOURCE #executeQuery
+        #public static SysResultSet executeQuery(str sqlStatement, Connection connection = new Connection())
+        #{
+        #    return SysResultSet::construct(SysResultSet::executeQuery_base(sqlStatement, connection));
+        #}
+      ENDSOURCE
+      SOURCE #executeQuery_base
+        #server public static ResultSet executeQuery_base(str sqlStatement, Connection connection = new Connection())
+        #{
+        #    SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
+        #
+        #    permission.assert();
+        #    return connection.createStatement().executeQuery(sqlStatement);
+        #}
+      ENDSOURCE
+      SOURCE #executeUpdate
+        #server public static int executeUpdate(str sqlStatement, Connection connection = new Connection())
+        #{
+        #    SqlStatementExecutePermission permission = new SqlStatementExecutePermission(sqlStatement);
+        #
+        #    permission.assert();
+        #    return connection.createStatement().executeUpdate(sqlStatement);
+        #}
+      ENDSOURCE
+      SOURCE #get
+        #// метод выполняет преобразование, необходимое для чтения из resultSet
+        #//
+        #// у стандартного класса ResultSet есть особенности:
+        #// 1. каждое поле можно читать только один раз. при попытке повторного чтения возникает ошибка
+        #// 2. поля можно читать только в порядке возрастания номеров. если сначала считать поле с номером 2, а затем попытаться
+        #//    считать поле с номером 1, то возникает ошибка.
+        #// Чтобы не парится с этими особенностями - используйте класс SysResultSet
+        #//
+        #// preferType - тип поля, куда будет помещено значение. Существенная разница проявляется в Date и UtcDateTime.
+        #//
+        #// метод по умолчанию возвращает тип UtcDateTime
+        #// нужно выполнять дополнительную доводку типа для дат
+        #// во-первых, это безопасно и не приводит к потере данных.
+        #//            Поскольку DateTime всегда можно преобразовать к Date.
+        #//            А вот обратное преобразование уже не восстановит потенциально потерянную информацию.
+        #// во-вторых, к базе все равно надо обращаться по resultSet.getDateTime()
+        #// чтобы получить именно date, стоит указать preferType = types::Date
+        #//
+        #// метод специально сделан статическим, чтобы его можно было использовать в старом коде, который работает со стандартным ResultSet
+        #// хоть это и не очень хорошо с точки зрения производительности
+        #public static AnyType get( ResultSet  resultSet,
+        #                           int        columnIdx   = 1,
+        #                           boolean    insideLoop  = true, // пытаемся читать значение, когда внутри цикла (next() вернул true). Или возвращаем nullValue() если находимся за циклом.
+        #                           int        columnType  = resultSet.getMetaData().getColumnType(ColumnIdx),
+        #                           types      preferType  = types::AnyType)
+        #{
+        #    AnyType ret;
+        #    ;
+        #    Debug::assert(resultSet != null);
+        #    Debug::assert(columnIdx >= 1);
+        #
+        #    // it's kind of magic... constants
+        #    // see https://msdn.microsoft.com/en-us/library/resultsetmetadata.getcolumntype.aspx
+        #    //
+        #    switch( columnType )
+        #    {
+        #        case  0: // nvarchar = AX string
+        #        case  8: // varchar = AX string
+        #            if( insideLoop )
+        #                ret = SysResultSet::convert(resultSet.getString(columnIdx), preferType);
+        #            else
+        #                ret = SysResultSet::getNull(Types::String, preferType);
+        #            break;
+        #        case  1: // int = AX int
+        #        case  4: // tinyInt
+        #            if( insideLoop )
+        #                ret = SysResultSet::convert(resultSet.getInt(columnIdx), preferType);
+        #            else
+        #                ret = SysResultSet::getNull(Types::Integer, preferType);
+        #            break;
+        #        case  2: // numeric = AX real
+        #            if( insideLoop )
+        #                ret = SysResultSet::convert(resultSet.getReal(columnIdx), preferType);
+        #            else
+        #                ret = SysResultSet::getNull(Types::Real, preferType);
+        #            break;
+        #        case  3: // datetime OR date = AX Date and AX *utcDateTime (See NOTE)
+        #            if( insideLoop )
+        #                ret = SysResultSet::convert(resultSet.getDateTime(columnIdx), preferType);
+        #            else
+        #                ret = SysResultSet::getNull(Types::UtcDateTime, preferType);
+        #            break;
+        #        case 45: // uniqueidentifier = AX GUID
+        #            if( insideLoop )
+        #                ret = SysResultSet::convert(resultSet.getGuid(columnIdx), preferType);
+        #            else
+        #                ret = SysResultSet::getNull(Types::Guid, preferType);
+        #            break;
+        #        case 49: // bigint = AX int64
+        #            if( insideLoop )
+        #                ret = SysResultSet::convert(resultSet.getInt64(columnIdx), preferType);
+        #            else
+        #                ret = SysResultSet::getNull(Types::Int64, preferType);
+        #            break;
+        #        case  7: // varbinary = AX container. resultSet не умеет!
+        #        default:
+        #            throw error(error::wrongUseOfFunction(funcname())); // не смогли понять что за тип
+        #    }
+        #    return ret;
+        #}
+      ENDSOURCE
+      SOURCE #getFirst
+        #public static anytype getFirst(str sqlStatement, str columnName = "", Connection connection = new Connection())
+        #{
+        #    SysResultSet  res;
+        #
+        #    if( !columnName )
+        #        return SysResultSet::getFirst_idx(sqlStatement);
+        #
+        #    res = SysResultSet::executeQuery(sqlStatement, connection);
+        #    if( res.next() )
+        #        return res.value(columnName);
+        #
+        #    if( res.metaData() )
+        #        return res.valueNull(columnName);
+        #
+        #    return #NA;
+        #}
+      ENDSOURCE
+      SOURCE #getFirst_idx
+        #public static anytype getFirst_idx(str sqlStatement, int columnIdx = 1, Connection connection = new Connection())
+        #{
+        #    SysResultSet  res = SysResultSet::executeQuery(sqlStatement, connection);
+        #
+        #    if( res.next() )
+        #        return res.value_idx(columnIdx);
+        #
+        #    if( res.metaData() )
+        #        return res.valueNull_idx(columnIdx);
+        #
+        #    return #NA;
+        #}
+      ENDSOURCE
+      SOURCE #getNull
+        #// возвращает аксаптовское null-значение для указанной колонки
+        #public static anytype getNull(types t, Types preferType = types::AnyType)
+        #{
+        #    if( preferType == Types::Date && t == types::UtcDateTime )
+        #    {
+        #        return DateNull();
+        #    }
+        #    return nullValueBaseType(t, true);
+        #}
+      ENDSOURCE
+    ENDMETHODS
+  ENDCLASS
+
+***Element: CLS
+
+; Microsoft Dynamics AX Class: SysResultSetTest выгружен
+; --------------------------------------------------------------------------------
+  CLSVERSION 1
+  
+  CLASS #SysResultSetTest
+    Id 53963
+    PROPERTIES
+      Name                #SysResultSetTest
+      Extends             #SysTestCase
+      RunOn               #Server
+    ENDPROPERTIES
+    
+    METHODS
+      Version: 3
+      SOURCE #classDeclaration
+        #// mazzy, v1.03-ax5, 27.04.2016
+        #class SysResultSetTest extends SysTestCase
+        #{
+        #}
+        #
+      ENDSOURCE
+      SOURCE #testAxTables
+        #void testAxTables()
+        #{
+        #    SqlSystem       sql = new SqlSystem();
+        #
+        #    CustTrans       trans;
+        #    CustTransOpen   open;
+        #    RefRecId        trans_recId;
+        #    RefRecId        open_recId;
+        #
+        #    CustTrans       trans_res;
+        #    CustTransOpen   open_res;
+        #
+        #    SysResultSet    resultSet;
+        #    int             lineCount;
+        #    int             fieldCount;
+        #
+        #    SysDictTable    dt = SysDictTable::newTableId(trans.TableId);
+        #    int             i;
+        #    SysDictField    df;
+        #;
+        #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+        #
+        #    resultSet = SysResultSet::executeQuery(strfmt(@"
+        #        select top 10
+        #            o.AMOUNTMST as o_AMOUNTMST,
+        #            o.AMOUNTCUR as o_AMOUNTCUR,
+        #            o.DUEDATE as o_DUEDATE,
+        #            o.RECID as o_RECID,
+        #            t.*
+        #        from CUSTTRANS as t
+        #        join CUSTTRANSOPEN as o
+        #            on (t.DATAAREAID = o.DATAAREAID and t.RECID = o.REFRECID)
+        #        where t.DATAAREAID = %1
+        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #
+        #    this.assertNotNull(resultSet, "resultSet не создан");
+        #
+        #    while( resultSet.next() )
+        #    {
+        #        ++lineCount;
+        #
+        #        open_recId = resultSet.value("o_recId");
+        #        this.assertNotEqual(0, open_recId, strfmt("%1: не прочитан open.recid", lineCount));
+        #
+        #        open = CustTransOpen::find(open_recId);
+        #        this.assertEquals(open_recId, open.RecId, strfmt("%1: не найден open с recID %1", lineCount, open_recId));
+        #
+        #        this.assertEquals(3, resultSet.copyTo(open_res, "o_%1"), strfmt("%1: copyTo скопировал не все поля, указанные в запросе", lineCount));
+        #        this.assertEquals(open.AmountCur, open_res.AmountCur, strfmt("%1: не совпадают AmountCur в open и resultSet после copyTo", lineCount));
+        #        this.assertEquals(open.AmountMST, open_res.AmountMST, strfmt("%1: не совпадают AmountMST в open и resultSet после copyTo", lineCount));
+        #        this.assertEquals(open.DueDate, open_res.DueDate,     strfmt("%1: не совпадают DueDate в open и resultSet после copyTo", lineCount));
+        #
+        #        //////////////////////////////
+        #        trans_recId = resultSet.value("recId");
+        #        this.assertNotEqual(0, trans_recId, strfmt("%1: не прочитан trans.recid", lineCount));
+        #
+        #        trans = CustTrans::find(trans_recId);
+        #        this.assertEquals(trans_recId, trans.RecId, strfmt("%1: не найден trans с recID %2", lineCount, trans_recId));
+        #
+        #        resultSet.copyTo(trans_res);
+        #        for(i=1; i<=dt.columnCnt(); ++i )
+        #        {
+        #            df = new SysDictField(dt.id(), dt.column2id(i));
+        #            if( df && df.saveContents() && df.isSql() && !df.isSystem() )
+        #            {
+        #                this.assertEquals(trans.(df.extendedFieldId()), trans_res.(df.extendedFieldId()), strfmt("%1: не совпадают trans.%2 и resultSet после copyTo", lineCount, df.name()));
+        #            }
+        #        }
+        #        //this.assertTrue(trans.equal(trans_res), strfmt("%1: не совпадают данные в trans и resultSet после copyTo", lineCount));
+        #    }
+        #
+        #    this.assertNotEqual(0, lineCount, "SQL-запрос возвратил пустой resultSet. Возможно, в этой компании нет открытых проводок по клиентам. Для полноценного тестирования класса в компании должно быть по крайней мере 2 открытые проводки");
+        #    this.assertNotEqual(1, lineCount, "SQL-запрос возвратил одну строку. Для полноценного тестирования класса в компании должно быть по крайней мере 2 открытые проводки");
+        #}
+      ENDSOURCE
+      SOURCE #testAxTablesTmp
+        #void testAxTablesTmp()
+        #{
+        #    SqlSystem       sql = new SqlSystem();
+        #
+        #    CustTrans       trans;
+        #    TmpAccountSum   accountSum;
+        #
+        #    SysResultSet    resultSet;
+        #;
+        #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+        #
+        #    resultSet = SysResultSet::executeQuery(strfmt(@"
+        #        select top 10
+        #            t.AccountNum, sum(t.AmountMST) as Balance02
+        #        from CUSTTRANS as t
+        #        where t.DATAAREAID = %1
+        #        group by AccountNum
+        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #
+        #    this.assertNotNull(resultSet, "resultSet не создан");
+        #
+        #    while( resultSet.next() )
+        #    {
+        #        resultSet.copyTo(accountSum);
+        #
+        #        this.assertEquals(resultSet.value("AccountNum"), accountSum.AccountNum, "copyTo не скопировал accountNum");
+        #        this.assertEquals(resultSet.value("Balance02"), accountSum.Balance02, "copyTo не скопировал Balance02");
+        #    }
+        #}
+      ENDSOURCE
+      SOURCE #testCount
+        #void testCount()
+        #{
+        #    SqlSystem       sql = new SqlSystem();
+        #    CustTable       cust;
+        #    SysResultSet    resultSet;
+        #    int             recCount;
+        #
+        #    int getRecCount()
+        #    {
+        #        Query q = new Query();
+        #        q.addDataSource(cust.TableId);
+        #        return SysQuery::countTotal(new QueryRun(q));
+        #    }
+        #
+        #;
+        #    recCount = getRecCount();
+        #
+        #    cust.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если cust находится в виртуальной компании
+        #
+        #    // имя колонки не указано
+        #    // количество записей, посчитанное разными способами, должно совпадать со значением первой колонки
+        #    this.assertEquals(
+        #        recCount,
+        #        SysResultSet::getFirst(strfmt(@"select count(*) from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)))
+        #    );
+        #
+        #    // имя колонки указано
+        #    // количество записей, посчитанное разными способами, должно совпадать
+        #    this.assertEquals(
+        #        recCount,
+        #        SysResultSet::getFirst(strfmt(@"select 1 as firstCol, count(*) as cnt from CUSTTABLE as t where t.DATAAREAID = %1", sql.sqlLiteral(cust.dataAreaId)), 'cnt')
+        #    );
+        #}
+      ENDSOURCE
+      SOURCE #testEmpty
+        #void testEmpty()
+        #{
+        #    this.assertEquals(0, SysResultSet::getFirst(@"select 1 where 1 = 2"));
+        #    this.assertEquals(0, SysResultSet::getFirst(@"select 1 as col where 1 = 2","col"));
+        #}
+      ENDSOURCE
+      SOURCE #testEmptyColumns
+        #void testEmptyColumns()
+        #{
+        #    SysResultSet    resultSet = SysResultSet::executeQuery(@"select '' as str, 1 as num where 1 = 2");
+        #;
+        #    this.assertFalse(resultSet.next());
+        #    this.assertEquals(0, resultSet.values().fields()); // после неудачного next стандартный класс возвращает 0!
+        #    this.assertEquals(0, resultSet.metaData().getColumnCount()); // после неудачного next стандартный класс возвращает 0!
+        #    this.assertEquals("",resultSet.metaData().getColumnName(1)); // если выборка пустая, то нет имен колонок.
+        #    this.assertEquals("",resultSet.metaData().getColumnName(2)); // если выборка пустая, то нет имен колонок.
+        #    this.assertEquals("",resultSet.metaData().getColumnName(3)); // если выборка пустая, то нет имен колонок. даже если колонок нет
+        #    this.assertEquals(1,resultSet.metaData().getColumnType(1)); // а вот тип есть! но он всегда равен 1. очень странно!
+        #    this.assertEquals(1,resultSet.metaData().getColumnType(2)); // а вот тип есть! но он всегда равен 1. очень странно!
+        #    //resultSet.metaData().getColumnType(3); // а здесь будет исключение. очень странно!
+        #}
+      ENDSOURCE
+      SOURCE #testMeta
+        #void testMeta()
+        #{
+        #    SqlSystem           sql = new SqlSystem();
+        #    CustTrans           trans;
+        #    SysResultSet        resultSet;
+        #    ResultSetMetaData   meta;
+        #
+        #    int                 lineCount;
+        #;
+        #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании. даже если ct находится в виртуальной компании
+        #
+        #    resultSet = SysResultSet::executeQuery(strfmt(@"
+        #        select top 10 accountNum, transDate, sum(amountMST) as amountMST, count(*) from CUSTTRANS
+        #        where DATAAREAID = %1
+        #        group by accountNum, transDate
+        #        ", sql.sqlLiteral(trans.dataAreaId)));
+        #
+        #    this.assertNotNull(resultSet, "resultSet не создан");
+        #    this.assertNotNull(resultSet.resultSet(), "resultSet() не создан");
+        #
+        #    this.assertNull(resultSet.metaData(), "metadata() до первого next");
+        #
+        #    meta = resultSet.resultSet().getMetaData();
+        #    this.assertNotNull(meta, "MetaData не создана");
+        #    this.assertEquals(0,  meta.getColumnCount(), "число колонок до первого next");
+        #    this.assertEquals("", meta.getColumnName(1), "имя колонки до первого next");
+        #    this.assertEquals(1,  meta.getColumnType(1), "тип колонки до первого next");
+        #
+        #
+        #    while( resultSet.next() )
+        #    {
+        #        ++lineCount;
+        #
+        #        this.assertNotNull(resultSet.metaData(), strfmt("%1: metadata() после next", lineCount));
+        #        this.assertNotNull(resultSet.values(), strfmt("%1: values() после next", lineCount));
+        #
+        #        meta = resultSet.resultSet().getMetaData();
+        #        this.assertNotNull(meta, strfmt("%1: MetaData после next", lineCount));
+        #        this.assertEquals(4,            meta.getColumnCount(), strfmt("%1: число колонок после next", lineCount));
+        #        this.assertEquals("accountNum", meta.getColumnName(1), strfmt("%1: имя колонки1 после next", lineCount));
+        #        this.assertEquals(0,            meta.getColumnType(1), strfmt("%1: тип колонки1 после next", lineCount));
+        #        this.assertEquals("transDate",  meta.getColumnName(2), strfmt("%1: имя колонки2 после next", lineCount));
+        #        this.assertEquals(3,            meta.getColumnType(2), strfmt("%1: тип колонки2 после next", lineCount));
+        #        this.assertEquals("amountMST",  meta.getColumnName(3), strfmt("%1: имя колонки3 после next", lineCount));
+        #        this.assertEquals(2,            meta.getColumnType(3), strfmt("%1: тип колонки3 после next", lineCount));
+        #        this.assertEquals("",           meta.getColumnName(4), strfmt("%1: имя колонки4 после next", lineCount));
+        #        this.assertEquals(1,            meta.getColumnType(4), strfmt("%1: тип колонки4 после next", lineCount));
+        #
+        #        this.assertEquals(4,                    resultSet.values().fields(), strfmt("%1: число значений должно совпадать с числом колонок после next", lineCount));
+        #        this.assertEquals("accountNum",         resultSet.values().fieldName(1), strfmt("%1: имя значения1 после next", lineCount));
+        #        this.assertEquals(Types::String,        resultSet.values().fieldType(1), strfmt("%1: тип значения1 после next", lineCount));
+        #        this.assertEquals("transDate",          resultSet.values().fieldName(2), strfmt("%1: имя значения2 после next", lineCount));
+        #        this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), strfmt("%1: тип значения2 после next", lineCount));
+        #        this.assertEquals("amountMST",          resultSet.values().fieldName(3), strfmt("%1: имя значения3 после next", lineCount));
+        #        this.assertEquals(Types::Real,          resultSet.values().fieldType(3), strfmt("%1: тип значения3 после next", lineCount));
+        #        this.assertEquals("4",                  resultSet.values().fieldName(4), strfmt("%1: имя значения4 после next", lineCount));
+        #        this.assertEquals(Types::Integer,       resultSet.values().fieldType(4), strfmt("%1: тип значения4 после next", lineCount));
+        #
+        #        this.assertEquals(1, resultSet.values().index("accountNum"),strfmt("%1: номер значения1 после next", lineCount));
+        #        this.assertEquals(2, resultSet.values().index("transDate"), strfmt("%1: номер значения2 после next", lineCount));
+        #        this.assertEquals(3, resultSet.values().index("amountMST"), strfmt("%1: номер значения3 после next", lineCount));
+        #        this.assertEquals(4, resultSet.values().index("4"),         strfmt("%1: номер значения4 после next", lineCount));
+        #    }
+        #
+        #    this.assertNotNull(resultSet.metaData(), strfmt("%1: metadata() после цикла", lineCount));
+        #    this.assertNotNull(resultSet.values(),   strfmt("%1: values() после цикла", lineCount));
+        #
+        #    meta = resultSet.resultSet().getMetaData();
+        #    this.assertNotNull(meta, strfmt("%1: MetaData не создана", lineCount));
+        #    this.assertEquals(4,            meta.getColumnCount(), strfmt("%1: число колонок после цикла", lineCount));
+        #    this.assertEquals("accountNum", meta.getColumnName(1), strfmt("%1: имя колонки1 после цикла", lineCount));
+        #    this.assertEquals(0,            meta.getColumnType(1), strfmt("%1: тип колонки1 после цикла", lineCount));
+        #    this.assertEquals("transDate",  meta.getColumnName(2), strfmt("%1: имя колонки2 после цикла", lineCount));
+        #    this.assertEquals(3,            meta.getColumnType(2), strfmt("%1: тип колонки2 после цикла", lineCount));
+        #    this.assertEquals("amountMST",  meta.getColumnName(3), strfmt("%1: имя колонки3 после цикла", lineCount));
+        #    this.assertEquals(2,            meta.getColumnType(3), strfmt("%1: тип колонки3 после цикла", lineCount));
+        #    this.assertEquals("",           meta.getColumnName(4), strfmt("%1: имя колонки4 после цикла", lineCount));
+        #    this.assertEquals(1,            meta.getColumnType(4), strfmt("%1: тип колонки4 после цикла", lineCount));
+        #
+        #    this.assertEquals(4,                    resultSet.values().fields(), "число значений должно совпадать с числом колонок после цикла");
+        #    this.assertEquals("accountNum",         resultSet.values().fieldName(1), "имя значения1 после цикла");
+        #    this.assertEquals(Types::String,        resultSet.values().fieldType(1), "тип значения1 после цикла");
+        #    this.assertEquals("transDate",          resultSet.values().fieldName(2), "имя значения2 после цикла");
+        #    this.assertEquals(Types::UtcDateTime,   resultSet.values().fieldType(2), "тип значения2 после цикла");
+        #    this.assertEquals("amountMST",          resultSet.values().fieldName(3), "имя значения3 после цикла");
+        #    this.assertEquals(Types::Real,          resultSet.values().fieldType(3), "тип значения3 после цикла");
+        #    this.assertEquals("4",                  resultSet.values().fieldName(4), "имя значения4 после цикла");
+        #    this.assertEquals(Types::Integer,       resultSet.values().fieldType(4), "тип значения4 после цикла");
+        #
+        #    this.assertEquals(1, resultSet.values().index("accountNum"),"номер значения1 после цикла");
+        #    this.assertEquals(2, resultSet.values().index("transDate"), "номер значения2 после цикла");
+        #    this.assertEquals(3, resultSet.values().index("amountMST"), "номер значения3 после цикла");
+        #    this.assertEquals(4, resultSet.values().index("4"),         "номер значения4 после цикла");
+        #
+        #
+        #    this.assertNotEqual(0, lineCount, "SQL-запрос возвратил пустой resultSet. Возможно, в этой компании нет открытых проводок по клиентам. Для полноценного тестирования класса в компании должно быть по крайней мере 2 проводки");
+        #    this.assertNotEqual(1, lineCount, "SQL-запрос возвратил одну строку. Для полноценного тестирования класса в компании должно быть по крайней мере 2 проводки");
+        #}
+      ENDSOURCE
+      SOURCE #testNull
+        #void testNull()
+        #{
+        #    int i,n;
+        #    str columnName;
+        #
+        #    SysResultSet    resultSet;
+        #
+        #    this.assertEquals(DatabaseId::MS_Sql_Server, SqlSystem::databaseBackendId()); // протестировано только на MS SQL
+        #
+        #    resultSet = SysResultSet::executeQuery(@"
+        #    select
+        #           cast(null as bigint) as bigint,
+        #           cast(null as char) as char,
+        #           cast(null as date) as date,
+        #           cast(null as dateTime) as dateTime,
+        #           cast(null as decimal) as decimal,
+        #           cast(null as float) as float,
+        #           cast(null as money) as money,
+        #           cast(null as nchar) as nchar,
+        #           cast(null as ntext) as ntext,
+        #           cast(null as numeric) as numeric,
+        #           cast(null as nvarchar) as nvarchar,
+        #           cast(null as real) as real,
+        #           cast(null as smallDateTime) as smallDateTime,
+        #           cast(null as text) as text,
+        #           cast(null as time) as time,
+        #           cast(null as tinyint) as tinyint,
+        #           cast(null as uniqueidentifier) as uniqueidentifier,
+        #           cast(null as varchar) as varchar
+        #    ");
+        #
+        #    this.assertNotNull(resultSet, "resultSet не создан");
+        #
+        #    this.assertTrue(resultSet.next(), "SQL-запрос возвратил пустой resultSet");
+        #
+        #    this.assertFalse(resultSet.resultSet().wasNull(1), "wasNull до чтения поля 1"); // метод wasNull дает информацию только после попытки чтения
+        #    this.assertFalse(resultSet.resultSet().wasNull(2), "wasNull до чтения поля 2"); // метод wasNull дает информацию только после попытки чтения
+        #
+        #    n = resultSet.values().fields();
+        #    for(i=1; i<=n; ++i)
+        #    {
+        #        columnName = resultSet.values().fieldName(i);
+        #        this.assertTrue(resultSet.resultSet().wasNull(i), strFmt("wasNull после чтения поля %1:%2",i, columnName));
+        #        this.assertEquals(resultSet.valueNull(columnName), resultSet.value(columnName), columnName);
+        #        this.assertEquals(resultSet.valueNull_idx(i),      resultSet.value_idx(i),      columnName);
+        #    }
+        #}
+      ENDSOURCE
+      SOURCE #main
+        #static void main(Args args)
+        #{
+        #    SysTestRunner       runner      = new SysTestRunner(classstr(SysResultSetTest));
+        #    SysTestListenerDB   listener    = new SysTestListenerDB();
+        #    SysTestJobTable     sysTestJobTable;
+        #
+        #    runner.getResult().addListener(listener);
+        #    runner.run();
+        #
+        #    sysTestJobTable = SysTestJobTable::find(listener.parmJobId());
+        #    infolog.add( sysTestJobTable.Status == SysTestStatus::Passed ? Exception::Info : Exception::Warning,
+        #                 strfmt("%3: Тест завершен. %1:%2", sysTestJobTable.TestJobId, sysTestJobTable.Name, sysTestJobTable.Status),
+        #                 '', SysInfoAction_TableField::newBuffer(sysTestJobTable) );
+        #}
+        #
+      ENDSOURCE
+    ENDMETHODS
+  ENDCLASS
+
+***Element: JOB
+
+; Microsoft Dynamics AX Job: tutorial_SysResultSet_AX выгружен
+; --------------------------------------------------------------------------------
+  JOBVERSION 1
+  
+  SOURCE #tutorial_SysResultSet_AX
+    #// пример работы SysResultSet с аксаптовскими таблицами
+    #// mazzy, v1.03-ax5, 27.04.2016
+    #//
+    #// Disclimer:
+    #// ResultSet всегда медленнее читает аксаптовские, чем непосредственно select или query
+    #// во-первых, потому что ResultSet читает по одной записи из курсора, а select или query читают сразу несколько записей в буфер
+    #// поэтому число обращений к SQL серверу у объекта ResultSet всегда будет "не меньше", чем select
+    #// см. http://axforum.info/forums/showthread.php?t=4341
+    #// во-вторых, никто не знает что за обертки и врапперы используются в ядре для реализации ResultSet
+    #// во-третьих, класс SysResultSet тратит значительные ресурсы на хранение результатов и прочее обслуживание
+    #//
+    #// Кроме того, ResultSet всегда опаснее прямых запросов.
+    #// Поскольку ResultSet ничего не знает о виртуальных компаниях, XDS/RLS, о правах доступа к таблицам и о прочих безопасностях
+    #//
+    #// Однако есть типы задач, когда использование ResultSet для доступа к аксаптовским таблицам оправдано.
+    #// Дело в том, что в аксаптовских select/query отсутствует having. А в прошлых версиях отсутствовал и union.
+    #// Поэтому всевозможные сверки, поиск групп с заданными свойствами - другими словами, задачи, требующие having - вполне можно решать при помощи SysResultSet
+    #//
+    #// Еще один пласт задач - наложить несколько агрегатных функций на одно поле таблицы.
+    #// Так, в Аксапте нельзя в одном запросе одновременно получить sum(Amount) и avg(Amount) - надо делать несколько запросов
+    #// Типовой запрос с несколькими функциями - из одной суммы получить сумму по дебету и сумму по кредиту
+    #//
+    #// в данном примере рассматривается типовая задача сверки суммы в открытых проводках по поставщикам с суммой проводок
+    #// для простоты сверка делается без валют, только по AmountMST
+    #static void tutorial_SysResultSet_AX(Args _args)
+    #{
+    #    #AVIfiles
+    #    VendTrans               trans;
+    #    VendTransOpen           open;
+    #
+    #    SqlSystem               sql         = new SqlSystem();
+    #    SysResultSet            resultSet;
+    #
+    #    str                     description = funcname();
+    #    SysOperationProgress    progress    = SysOperationProgress::newGeneral(#AviSearch,description,0);
+    #;
+    #    setprefix(description);
+    #
+    #    trans.clear(); // проявляем dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
+    #    open.clear();  // проявляем dataAreaId, соответствующее текущей компании, даже таблица в виртуальной компании
+    #
+    #    Debug::assert(sql.databaseId() == DatabaseId::MS_Sql_Server);
+    #
+    #    startLengthyOperation();
+    #    resultSet = SysResultSet::executeQuery(strfmt(@"
+    #    with trans as (
+    #        select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID from VENDTRANSOPEN as o
+    #        where o.DATAAREAID = %1
+    #        union
+    #        select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID from VENDTRANS as t
+    #        where t.DATAAREAID = %2
+    #        )
+    #    select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID from trans
+    #        group by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId -- индекс t.AccountDateIdx, o.AccountDateIdx
+    #        having sum(AmountMST) <> 0
+    #        order by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
+    #    ", sql.sqlLiteral(open.dataAreaId),
+    #       sql.sqlLiteral(trans.dataAreaId)));
+    #
+    #    while( resultSet.next() )
+    #    {
+    #        error(strFmt("%1, %2, %3, %4", resultSet.value("AmountMST"), resultSet.value("AccountNum"), resultSet.value("TransDate", Types::Date), resultSet.value("RecId")),
+    #              "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId"))));
+    #        progress.incCount();
+    #    }
+    #    endLengthyOperation();
+    #    info(strfmt("%1 records done.", progress.getCount_RU()));
+    #}
+  ENDSOURCE
+
+***Element: JOB
+
+; Microsoft Dynamics AX Job: tutorial_SysResultSet_Legacy выгружен
+; --------------------------------------------------------------------------------
+  JOBVERSION 1
+  
+  SOURCE #tutorial_SysResultSet_Legacy
+    #// пример работы SysResultSet с унаследованным кодом, который уже работает с ResultSet
+    #// mazzy, v1.02-ax5, 14.04.2016
+    #//
+    #// Disclimer:
+    #// Конечно надо было бы показать обращение к внешней базе - Oracle, MS SQL, Access, DBF и прочее
+    #// Но resultSet со всеми базами работает одинаково. Отличаются только connection.
+    #// Чтобы не усложнять пример установокой базы и не поставлять отдельный файл с базой
+    #// чтение выполняется из аксаптовских таблиц.
+    #//
+    #static void tutorial_SysResultSet_Legacy(Args _args)
+    #{
+    #    #AVIfiles
+    #    Connection                      conn        = new Connection(); // в реальном коде здесь должно быть ODBCconnection, OCIconnection со своими connectionString...
+    #    ResultSet                       resultSet;
+    #
+    #    str                             sqlStr      = @"select top 10 * from VENDTRANS as t";
+    #    //legacy: SqlStatementExecutePermission   permission  = new SqlStatementExecutePermission(sqlStr);
+    #    //legacy: Statement                       sqlStatement;
+    #
+    #    str                             description = funcname();
+    #    SysOperationProgress            progress    = SysOperationProgress::newGeneral(#AviSearch, description, 0);
+    #;
+    #    setprefix(description);
+    #
+    #    startLengthyOperation();
+    #    //legacy: permission.assert();
+    #    //legacy: sqlStatement = conn.createStatement();
+    #    //legacy: resultSet = sqlStatement.executeQuery(sqlStr);
+    #    resultSet = SysResultSet::executeQuery_base(sqlStr, conn); // можно значительно упростить код и состав переменных
+    #
+    #    while( resultSet.next() )
+    #    {
+    #        // legacyCode - обратите внимание, что колонки читаются в возрастающем порядке и каждая колонка читается только один раз
+    #        // ... = resultSet.getString(1)
+    #        // ... = resultSet.getInt(2)
+    #        // ... = resultSet.getReal(3)
+    #        //
+    #        // вы хотите добавить обработку своих только что добавленных полей
+    #        info(strFmt("%1", SysResultSet::get(resultSet, 4)));
+    #        info(strFmt("%1", SysResultSet::get(resultSet, 5)));
+    #        // чтобы получать значения по именам, все таки придется изменить тип переменной resultSet на SysResultSet.
+    #
+    #        progress.incCount();
+    #    }
+    #    endLengthyOperation();
+    #    info(strfmt("%1 records done.", progress.getCount_RU()));
+    #}
+  ENDSOURCE
+
+***Element: PRN
+
+; Microsoft Dynamics AX Project : SysResultSet unloaded
+; --------------------------------------------------------------------------------
+  PROJECTVERSION 2
+  
+  PROJECT #SysResultSet
+   SHARED
+  PROPERTIES
+    Name                #SysResultSet
+  ENDPROPERTIES
+  
+    PROJECTCLASS ProjectNode
+    BEGINNODE
+      FILETYPE 0
+      UTILTYPE 45
+      UTILOBJECTID 53944
+      NODETYPE 329
+      NAME #SysResultSet
+    ENDNODE
+    BEGINNODE
+      FILETYPE 0
+      UTILTYPE 45
+      UTILOBJECTID 53963
+      NODETYPE 329
+      NAME #SysResultSetTest
+    ENDNODE
+    BEGINNODE
+      FILETYPE 0
+      UTILTYPE 5
+      UTILOBJECTID 0
+      NODETYPE 215
+      NAME #tutorial_SysResultSet_AX
+    ENDNODE
+    BEGINNODE
+      FILETYPE 0
+      UTILTYPE 5
+      UTILOBJECTID 0
+      NODETYPE 215
+      NAME #tutorial_SysResultSet_Legacy
+    ENDNODE
+  ENDPROJECT
+  
+
+***Element: END

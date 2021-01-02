@@ -1,5 +1,0 @@
-﻿// возвращает аксаптовское null-значение для указанной колонки
-public static anytype getNull(types t, Types preferType = types::AnyType)
-{
-    return nullValueBaseType(t, true);
-}
