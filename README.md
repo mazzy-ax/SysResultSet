@@ -14,36 +14,36 @@
 * каждое поле в стандартном resultSet можно читать только один раз. При попытке повторного чтения возникает ошибка.
 * поля в стандартном resultSEt можно читать только в порядке возрастания номеров. Если сначала считать поле с номером 2, а затем попытаться считать поле с номером 1, то возникает ошибка.
 
-Пример использования в ax2009:
+Пример использования для ax2009 - запрос для сверки остатков и сумм в открытых проводках:
 
 ```java
-SysResultSet resultSet;
+SysResultSet resultSet = SysResultSet::executeQuery(strfmt(@"
 
-resultSet = SysResultSet::executeQuery(strfmt(@"
-    with trans as (
-        select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID from VENDTRANSOPEN as o
-        where o.DATAAREAID = %1
-        union
-        select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID from VENDTRANS as t
-        where t.DATAAREAID = %2
-        )
-    select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID from trans
-        group by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId -- индекс t.AccountDateIdx, o.AccountDateIdx
-        having sum(AmountMST) <> 0
-        order by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
-    ", sql.sqlLiteral(open.dataAreaId),
-       sql.sqlLiteral(trans.dataAreaId)));
+with trans as (
+    select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID from VENDTRANSOPEN as o
+    where o.DATAAREAID = %1
+    union
+    select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID from VENDTRANS as t
+    where t.DATAAREAID = %2
+    )
+select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID from trans
+    group by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId -- индекс t.AccountDateIdx, o.AccountDateIdx
+    having sum(AmountMST) <> 0
+    order by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
 
-    while( resultSet.next() )
-    {
-        info(strFmt("%1, %2, %3, %4",
-                resultSet.value("AmountMST"),
-                resultSet.value("AccountNum"),
-                resultSet.value("TransDate", Types::Date),
-                resultSet.value("RecId")),
-            "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId"))));
-        progress.incCount();
-    }
+", sql.sqlLiteral(open.dataAreaId),
+    sql.sqlLiteral(trans.dataAreaId)));
+
+while( resultSet.next() )
+{
+    info(strFmt("%1, %2, %3, %4",
+            resultSet.value("AmountMST"),
+            resultSet.value("AccountNum"),
+            resultSet.value("TransDate", Types::Date),
+            resultSet.value("RecId")),
+        "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId"))));
+    progress.incCount();
+}
 ```
 
 Автор первого варианта обертки - Роман Долгополов (rdol, [db](http://axforum.info/forums/member.php?u=2836)):
