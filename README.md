@@ -31,8 +31,7 @@ select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID fro
     having sum(AmountMST) <> 0
     order by DATAAREAID, ACCOUNTNUM, TRANSDATE, RecId
 
-", sql.sqlLiteral(open.dataAreaId),
-    sql.sqlLiteral(trans.dataAreaId)));
+", sql.sqlLiteral(open.dataAreaId), sql.sqlLiteral(trans.dataAreaId)));
 
 while( resultSet.next() )
 {
@@ -40,8 +39,9 @@ while( resultSet.next() )
             resultSet.value("AmountMST"),
             resultSet.value("AccountNum"),
             resultSet.value("TransDate", Types::Date),
-            resultSet.value("RecId")),
-        "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId"))));
+            resultSet.value("RecId")
+        ), "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId")))
+    );
     progress.incCount();
 }
 ```
