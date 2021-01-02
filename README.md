@@ -42,6 +42,7 @@ while( resultSet.next() )
             resultSet.value("RecId")
         ), "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId")))
     );
+
     progress.incCount();
 }
 ```
