@@ -41,7 +41,8 @@ while( resultSet.next() )
             resultSet.value("AccountNum"),
             resultSet.value("TransDate", Types::Date),
             resultSet.value("RecId")),
-        "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId"))));
+        "", SysInfoAction_TableField::newBuffer(VendTrans::find(resultSet.value("RecId")))
+    );
     progress.incCount();
 }
 ```
