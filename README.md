@@ -20,10 +20,12 @@
 SysResultSet resultSet = SysResultSet::executeQuery(strfmt(@"
 
 with trans as (
-    select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID from VENDTRANSOPEN as o
+    select o.AMOUNTMST, o.ACCOUNTNUM, o.TRANSDATE, o.REFRECID as RecId, o.DATAAREAID
+    from VENDTRANSOPEN as o
     where o.DATAAREAID = %1
     union
-    select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID from VENDTRANS as t
+    select -(t.AMOUNTMST - t.SETTLEAMOUNTMST) as AMOUNTMST, t.ACCOUNTNUM, t.TRANSDATE, t.RECID, t.DATAAREAID
+    from VENDTRANS as t
     where t.DATAAREAID = %2
     )
 select sum(AmountMST) as AmountMST, ACCOUNTNUM, TRANSDATE, RecId, DATAAREAID from trans
